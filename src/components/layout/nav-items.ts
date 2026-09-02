@@ -23,7 +23,7 @@ export type NavItem = {
 /** The four most frequent areas: these become the mobile bottom bar. */
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/leads", label: "Leads", icon: ClipboardList, planned: true },
+  { href: "/leads", label: "Leads", icon: ClipboardList },
   { href: "/members", label: "Members", icon: Users, planned: true },
   { href: "/coaching", label: "Coaching", icon: Sparkles, planned: true },
 ];

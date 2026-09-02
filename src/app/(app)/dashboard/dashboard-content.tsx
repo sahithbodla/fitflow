@@ -119,9 +119,9 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
     {
       title: "Start capturing leads",
       description:
-        "Share the public enquiry form, or add walk-ins manually. Arriving in the next phase.",
-      href: null,
-      cta: "Coming soon",
+        "Share your enquiry form, or add someone who walked in or called.",
+      href: "/leads/new",
+      cta: "Add a lead",
       done: false,
     },
   ];
@@ -277,6 +277,12 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
           Quick links
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
+          <QuickLink
+            href="/leads"
+            icon={ClipboardList}
+            title="Leads"
+            description="Your enquiry pipeline"
+          />
           <QuickLink
             href="/settings"
             icon={Sparkles}

@@ -3,11 +3,12 @@
 A mobile-first CRM and coaching platform for a fitness business — leads through
 to memberships, personal training and online coaching, in one application.
 
-> **Status: Phase 1 complete.** Authentication, branding, business settings,
-> user account management, the mobile app shell and a live-metric dashboard are
-> working. The Lead CRM, conversions, memberships and coaching modules are built
-> in subsequent phases. Navigation entries for unbuilt areas are visibly marked
-> "Soon" rather than linking to empty pages.
+> **Status: Phase 2 complete.** Authentication, branding, business settings,
+> account management, a live-metric dashboard and the full Lead CRM — public
+> enquiry form, manual entry, search, filters, status pipeline, follow-up
+> reminders and activity history — are working. Conversions, memberships and
+> coaching are built in subsequent phases. Navigation entries for unbuilt areas
+> are visibly marked "Soon" rather than linking to empty pages.
 
 ---
 
@@ -225,6 +226,22 @@ scripts/
   dev-db.ts           local MongoDB
   seed-admin.ts       staff account bootstrap
 ```
+
+## Public enquiry form
+
+`/lead` is the only route that writes to the database without a session. It is
+narrowed accordingly:
+
+- The schema accepts name, phone, email, interest and goal — nothing else.
+  `status` and `source` are set server-side, so a crafted submission cannot
+  create a lead that is already "converted".
+- A hidden honeypot field is accepted by validation but silently discards the
+  submission, because browser autofill sometimes fills hidden fields and a real
+  user must never see an error they cannot fix.
+- Five submissions per IP per hour (in-memory; see the note in
+  `src/lib/rate-limit.ts` if the app is ever scaled beyond one instance).
+- The same phone number within ten minutes is treated as a double-tap and
+  reports success without creating a second lead.
 
 ## Dates and timezones
 
