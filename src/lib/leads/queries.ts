@@ -188,6 +188,25 @@ export async function getLeadStatusCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
+/** Where a lead has already been converted to, if anywhere. */
+export async function getLeadConversions(leadId: string): Promise<
+  { type: string; personId: string; convertedAt: string; actor: string }[]
+> {
+  await connectToDatabase();
+  const { Conversion } = await import("@/models/Conversion");
+
+  const rows = await Conversion.find({ lead: leadId })
+    .sort({ convertedAt: -1 })
+    .lean();
+
+  return rows.map((row) => ({
+    type: String(row.type),
+    personId: String(row.person),
+    convertedAt: row.convertedAt.toISOString(),
+    actor: row.actor,
+  }));
+}
+
 /** Existing leads that look like the same person. Used to warn before creating. */
 export async function findPossibleDuplicates(
   phone: string,

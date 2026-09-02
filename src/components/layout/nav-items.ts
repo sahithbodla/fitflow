@@ -24,7 +24,7 @@ export type NavItem = {
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: ClipboardList },
-  { href: "/members", label: "Members", icon: Users, planned: true },
+  { href: "/people", label: "Customers", icon: Users },
   { href: "/coaching", label: "Coaching", icon: Sparkles, planned: true },
 ];
 

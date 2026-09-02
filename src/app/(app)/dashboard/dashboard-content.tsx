@@ -284,6 +284,12 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
             description="Your enquiry pipeline"
           />
           <QuickLink
+            href="/people"
+            icon={Users}
+            title="Customers"
+            description="Members and coaching clients"
+          />
+          <QuickLink
             href="/settings"
             icon={Sparkles}
             title="Business settings"

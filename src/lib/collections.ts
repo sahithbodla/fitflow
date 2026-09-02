@@ -11,6 +11,7 @@ export const COLLECTIONS = {
   businessSettings: "businesssettings",
   leads: "leads",
   people: "people",
+  conversions: "conversions",
   memberships: "memberships",
   membershipPlans: "membershipplans",
   payments: "paymentrecords",

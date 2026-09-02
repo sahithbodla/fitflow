@@ -3,12 +3,11 @@
 A mobile-first CRM and coaching platform for a fitness business — leads through
 to memberships, personal training and online coaching, in one application.
 
-> **Status: Phase 2 complete.** Authentication, branding, business settings,
-> account management, a live-metric dashboard and the full Lead CRM — public
-> enquiry form, manual entry, search, filters, status pipeline, follow-up
-> reminders and activity history — are working. Conversions, memberships and
-> coaching are built in subsequent phases. Navigation entries for unbuilt areas
-> are visibly marked "Soon" rather than linking to empty pages.
+> **Status: Phase 3 complete.** Authentication, branding, settings, account
+> management, a live-metric dashboard, the full Lead CRM and lead conversion
+> into customers are working. Memberships, payments and the coaching modules
+> are built in subsequent phases. Navigation entries for unbuilt areas are
+> visibly marked "Soon" rather than linking to empty pages.
 
 ---
 
@@ -242,6 +241,19 @@ narrowed accordingly:
   `src/lib/rate-limit.ts` if the app is ever scaled beyond one instance).
 - The same phone number within ten minutes is treated as a double-tap and
   reports success without creating a second lead.
+
+## Leads, people and conversion
+
+A **Lead** is an enquiry. A **Person** is a customer. Converting a lead creates
+the person and an append-only **Conversion** record — the lead itself is never
+deleted, so its source and full history survive.
+
+Identity is stored once. When a lead's phone or email matches an existing
+customer, conversion offers to attach to that person instead of creating a
+second record for the same human. One person can hold any combination of gym,
+personal-training and online-coaching conversions; a `{lead, type}` unique index
+means converting the same lead to the same destination twice is a no-op rather
+than a duplicate.
 
 ## Dates and timezones
 

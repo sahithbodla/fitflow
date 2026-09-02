@@ -20,12 +20,16 @@ import {
 } from "@/components/leads/lead-badges";
 import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
-import { getLead } from "@/lib/leads/queries";
+import { getLead, getLeadConversions } from "@/lib/leads/queries";
 import { formatDate, zonedParts } from "@/lib/dates";
 import {
   LEAD_INTEREST_LABELS,
   LEAD_SOURCE_LABELS,
 } from "@/lib/leads/constants";
+import {
+  CONVERSION_TYPE_LABELS,
+  type ConversionType,
+} from "@/lib/people/constants";
 import { telHref, whatsAppHref } from "@/lib/leads/phone";
 import {
   AddNoteForm,
@@ -59,6 +63,8 @@ export default async function LeadDetailPage({
   const brand = await getBrandSettings();
   const lead = await getLead(id);
   if (!lead) notFound();
+
+  const conversions = await getLeadConversions(lead.id);
 
   const contactRows = [
     {
@@ -218,17 +224,58 @@ export default async function LeadDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <CalendarPlus className="text-muted-foreground size-4" />
-                Next step
+                {conversions.length > 0 ? "Customer" : "Next step"}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-muted-foreground text-sm text-pretty">
-                Converting a lead into a member or coaching client arrives in the
-                next phase.
-              </p>
-              <Button disabled variant="outline" size="sm" className="w-full">
-                Convert lead
-              </Button>
+              {conversions.length > 0 ? (
+                <>
+                  <ul className="space-y-1.5">
+                    {conversions.map((row) => (
+                      <li
+                        key={`${row.type}-${row.convertedAt}`}
+                        className="text-sm"
+                      >
+                        <span className="font-medium">
+                          {CONVERSION_TYPE_LABELS[row.type as ConversionType]}
+                        </span>
+                        <span className="text-muted-foreground block text-xs">
+                          {formatDate(row.convertedAt, brand.timezone)} by{" "}
+                          {row.actor}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Button asChild size="sm" className="bg-brand text-brand-foreground hover:bg-brand-strong w-full">
+                    <Link href={`/people/${conversions[0].personId}`}>
+                      Open customer
+                    </Link>
+                  </Button>
+
+                  {conversions.length < 3 ? (
+                    <Button asChild size="sm" variant="outline" className="w-full">
+                      <Link href={`/leads/${lead.id}/convert`}>
+                        Convert to something else
+                      </Link>
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground text-sm text-pretty">
+                    Turn this lead into a gym member, PT client or online
+                    coaching client. Their lead history is kept.
+                  </p>
+                  <Button
+                    asChild
+                    size="sm"
+                    className="bg-brand text-brand-foreground hover:bg-brand-strong w-full"
+                  >
+                    <Link href={`/leads/${lead.id}/convert`}>Convert lead</Link>
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 
