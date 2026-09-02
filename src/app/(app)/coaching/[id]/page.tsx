@@ -29,6 +29,12 @@ import { getBrandSettings } from "@/lib/settings";
 import { getCoachingClient } from "@/lib/coaching/queries";
 import { listClientWorkoutPlans } from "@/lib/workouts/queries";
 import { listDietPlans } from "@/lib/diet/queries";
+import {
+  getCheckInSummary,
+  listCheckIns,
+} from "@/lib/checkins/queries";
+import { WeightChart } from "@/components/checkins/weight-chart";
+import { CheckInHistory } from "@/components/checkins/checkin-history";
 import { DIET_GOAL_LABELS } from "@/lib/diet/constants";
 import { WORKOUT_GOAL_LABELS } from "@/lib/workouts/constants";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +68,14 @@ export default async function CoachingClientPage({
   const workoutPlans =
     tab === "workouts" ? await listClientWorkoutPlans(client.id) : [];
   const dietPlans = tab === "diet" ? await listDietPlans(client.id) : [];
+
+  const [checkIns, checkInSummary] =
+    tab === "check-ins"
+      ? await Promise.all([
+          listCheckIns(client.id),
+          getCheckInSummary(client.id),
+        ])
+      : [[], null];
 
   return (
     <div className="space-y-5">
@@ -386,11 +400,91 @@ export default async function CoachingClientPage({
       ) : null}
 
       {tab === "check-ins" ? (
-        <EmptyState
-          icon={CalendarCheck}
-          title="Check-ins arrive in a later phase"
-          description="Weekly weight, adherence and questions, recorded by you."
-        />
+        <div className="space-y-5">
+          <div className="flex justify-end">
+            <Button
+              asChild
+              className="bg-brand text-brand-foreground hover:bg-brand-strong"
+            >
+              <Link href={`/coaching/${client.id}/check-ins/new`}>
+                <Plus className="size-4" />
+                Add check-in
+              </Link>
+            </Button>
+          </div>
+
+          {checkIns.length === 0 ? (
+            <EmptyState
+              icon={CalendarCheck}
+              title="No check-ins yet"
+              description="Record weight, adherence and questions from whatever the client sends you — there's no client portal in this MVP."
+              action={
+                <Button
+                  asChild
+                  className="bg-brand text-brand-foreground hover:bg-brand-strong"
+                >
+                  <Link href={`/coaching/${client.id}/check-ins/new`}>
+                    Record the first one
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <>
+              {checkInSummary && checkInSummary.latestWeight !== null ? (
+                <Card className="py-4">
+                  <CardContent className="space-y-4 px-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          Latest weight
+                        </p>
+                        <p className="mt-0.5 text-2xl font-semibold tabular-nums">
+                          {checkInSummary.latestWeight}
+                          <span className="text-base font-normal">
+                            {checkInSummary.weightUnit}
+                          </span>
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          Since last
+                        </p>
+                        <p className="mt-0.5 text-2xl font-semibold tabular-nums">
+                          {checkInSummary.lastChange === null
+                            ? "—"
+                            : `${checkInSummary.lastChange > 0 ? "+" : ""}${checkInSummary.lastChange}`}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">
+                          Since start
+                        </p>
+                        <p className="mt-0.5 text-2xl font-semibold tabular-nums">
+                          {checkInSummary.totalChange === null
+                            ? "—"
+                            : `${checkInSummary.totalChange > 0 ? "+" : ""}${checkInSummary.totalChange}`}
+                        </p>
+                      </div>
+                    </div>
+
+                    <WeightChart
+                      series={checkInSummary.series}
+                      unit={checkInSummary.weightUnit}
+                      timeZone={brand.timezone}
+                    />
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              <CheckInHistory
+                checkIns={checkIns}
+                clientId={client.id}
+                timeZone={brand.timezone}
+              />
+            </>
+          )}
+        </div>
       ) : null}
     </div>
   );

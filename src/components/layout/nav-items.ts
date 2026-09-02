@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BadgeCheck,
-  CalendarCheck,
   ClipboardList,
   CreditCard,
   Dumbbell,
@@ -40,7 +39,6 @@ export const SECONDARY_NAV: NavItem[] = [
   { href: "/payments", label: "Payments", icon: Receipt },
   { href: "/exercises", label: "Exercise library", icon: Dumbbell },
   { href: "/workouts", label: "Workout templates", icon: ListChecks },
-  { href: "/check-ins", label: "Check-ins", icon: CalendarCheck, planned: true },
   { href: "/settings", label: "Business settings", icon: Settings },
   { href: "/account", label: "My account", icon: UserRound },
 ];
