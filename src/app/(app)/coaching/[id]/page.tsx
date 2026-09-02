@@ -28,6 +28,8 @@ import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { getCoachingClient } from "@/lib/coaching/queries";
 import { listClientWorkoutPlans } from "@/lib/workouts/queries";
+import { listDietPlans } from "@/lib/diet/queries";
+import { DIET_GOAL_LABELS } from "@/lib/diet/constants";
 import { WORKOUT_GOAL_LABELS } from "@/lib/workouts/constants";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/dates";
@@ -59,6 +61,7 @@ export default async function CoachingClientPage({
 
   const workoutPlans =
     tab === "workouts" ? await listClientWorkoutPlans(client.id) : [];
+  const dietPlans = tab === "diet" ? await listDietPlans(client.id) : [];
 
   return (
     <div className="space-y-5">
@@ -311,11 +314,75 @@ export default async function CoachingClientPage({
       ) : null}
 
       {tab === "diet" ? (
-        <EmptyState
-          icon={Salad}
-          title="Diet plans arrive in a later phase"
-          description="Structured meal plans with optional calorie and macro targets."
-        />
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              asChild
+              className="bg-brand text-brand-foreground hover:bg-brand-strong"
+            >
+              <Link href={`/coaching/${client.id}/diet/new`}>
+                <Plus className="size-4" />
+                New diet plan
+              </Link>
+            </Button>
+          </div>
+
+          {dietPlans.length === 0 ? (
+            <EmptyState
+              icon={Salad}
+              title="No diet plans yet"
+              description="Build a plan of meals and foods, with optional targets you set yourself."
+              action={
+                <Button
+                  asChild
+                  className="bg-brand text-brand-foreground hover:bg-brand-strong"
+                >
+                  <Link href={`/coaching/${client.id}/diet/new`}>
+                    Create a plan
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-2.5">
+              {dietPlans.map((plan) => (
+                <Link
+                  key={plan.id}
+                  href={`/coaching/${client.id}/diet/${plan.id}`}
+                  className="bg-card hover:bg-accent/40 block rounded-xl border px-4 py-3.5 transition-colors"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{plan.title}</p>
+                    {plan.active ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        Current
+                      </span>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px]">
+                        Past
+                      </Badge>
+                    )}
+                    {plan.goal ? (
+                      <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
+                        {DIET_GOAL_LABELS[plan.goal]}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {plan.mealCount} {plan.mealCount === 1 ? "meal" : "meals"} ·{" "}
+                    {plan.itemCount}{" "}
+                    {plan.itemCount === 1 ? "item" : "items"} · from{" "}
+                    {formatDate(plan.startDate, brand.timezone)}
+                    {plan.calorieTarget !== null
+                      ? ` · ${plan.calorieTarget} kcal target`
+                      : ""}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       ) : null}
 
       {tab === "check-ins" ? (
