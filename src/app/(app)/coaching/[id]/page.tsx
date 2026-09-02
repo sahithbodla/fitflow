@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Pencil,
   Phone,
+  Plus,
   Salad,
   Target,
   UserRound,
@@ -26,6 +27,9 @@ import {
 import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { getCoachingClient } from "@/lib/coaching/queries";
+import { listClientWorkoutPlans } from "@/lib/workouts/queries";
+import { WORKOUT_GOAL_LABELS } from "@/lib/workouts/constants";
+import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/dates";
 import { LEAD_SOURCE_LABELS } from "@/lib/leads/constants";
 import { telHref, whatsAppHref } from "@/lib/leads/phone";
@@ -52,6 +56,9 @@ export default async function CoachingClientPage({
 
   const query = await searchParams;
   const tab = parseCoachingTab(query.tab);
+
+  const workoutPlans =
+    tab === "workouts" ? await listClientWorkoutPlans(client.id) : [];
 
   return (
     <div className="space-y-5">
@@ -228,11 +235,79 @@ export default async function CoachingClientPage({
       ) : null}
 
       {tab === "workouts" ? (
-        <EmptyState
-          icon={Dumbbell}
-          title="Workouts arrive in the next phase"
-          description="Assigning workout templates and building custom plans for this client."
-        />
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              asChild
+              className="bg-brand text-brand-foreground hover:bg-brand-strong"
+            >
+              <Link href={`/coaching/${client.id}/workouts/new`}>
+                <Plus className="size-4" />
+                New plan
+              </Link>
+            </Button>
+          </div>
+
+          {workoutPlans.length === 0 ? (
+            <EmptyState
+              icon={Dumbbell}
+              title="No workout plans yet"
+              description="Assign a template — they get their own copy to customise — or build one from scratch."
+              action={
+                <Button
+                  asChild
+                  className="bg-brand text-brand-foreground hover:bg-brand-strong"
+                >
+                  <Link href={`/coaching/${client.id}/workouts/new`}>
+                    Create a plan
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-2.5">
+              {workoutPlans.map((plan) => (
+                <Link
+                  key={plan.id}
+                  href={`/coaching/${client.id}/workouts/${plan.id}`}
+                  className="bg-card hover:bg-accent/40 block rounded-xl border px-4 py-3.5 transition-colors"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{plan.name}</p>
+                    {plan.active ? (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        Active
+                      </span>
+                    ) : (
+                      <Badge variant="secondary" className="text-[10px]">
+                        Archived
+                      </Badge>
+                    )}
+                    {plan.goal ? (
+                      <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
+                        {WORKOUT_GOAL_LABELS[plan.goal]}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {plan.dayCount} {plan.dayCount === 1 ? "day" : "days"} ·{" "}
+                    {plan.exerciseCount}{" "}
+                    {plan.exerciseCount === 1 ? "exercise" : "exercises"} · from{" "}
+                    {formatDate(plan.startDate, brand.timezone)}
+                  </p>
+
+                  {plan.sourceTemplateName ? (
+                    <p className="text-muted-foreground/80 mt-0.5 text-xs">
+                      From {plan.sourceTemplateName}
+                      {plan.customised ? " · customised" : ""}
+                    </p>
+                  ) : null}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       ) : null}
 
       {tab === "diet" ? (
