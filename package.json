@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm run build",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "db:dev": "tsx scripts/dev-db.ts",
-    "seed:admin": "tsx scripts/seed-admin.ts"
+    "seed:admin": "tsx scripts/seed-admin.ts",
+    "test": "tsx scripts/__checks__/run.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

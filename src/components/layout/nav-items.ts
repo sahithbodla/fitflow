@@ -37,7 +37,7 @@ export const SECONDARY_NAV: NavItem[] = [
   { href: "/diet", label: "Diet plans", icon: Salad, planned: true },
   { href: "/check-ins", label: "Check-ins", icon: CalendarCheck, planned: true },
   { href: "/settings", label: "Business settings", icon: Settings },
-  { href: "/account", label: "My account", icon: UserRound, planned: true },
+  { href: "/account", label: "My account", icon: UserRound },
 ];
 
 export function isActivePath(pathname: string, href: string): boolean {

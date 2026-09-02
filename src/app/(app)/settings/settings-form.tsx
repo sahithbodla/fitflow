@@ -1,48 +1,44 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Field } from "@/components/form/field";
+import { FormAlert } from "@/components/form/form-alert";
+import { SubmitButton } from "@/components/form/submit-button";
 import { saveBusinessSettingsAction } from "@/lib/actions/settings";
 import { idleFormState } from "@/lib/actions/types";
-import { isHexColor } from "@/lib/colors";
+import { isHexColor, readableForeground } from "@/lib/colors";
 import type { BrandSettings } from "@/lib/settings";
 
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {hint && !error ? (
-        <p className="text-muted-foreground text-xs">{hint}</p>
-      ) : null}
-      {error ? (
-        <p id={`${id}-error`} className="text-destructive text-xs">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
-}
+/** A short, practical list. Any IANA zone is accepted by the server. */
+const TIMEZONES = [
+  "Asia/Kolkata",
+  "Asia/Dubai",
+  "Asia/Singapore",
+  "Europe/London",
+  "Europe/Berlin",
+  "America/New_York",
+  "America/Chicago",
+  "America/Los_Angeles",
+  "Australia/Sydney",
+  "UTC",
+];
 
 function ColorField({
   id,
@@ -76,34 +72,13 @@ function ColorField({
           onChange={(event) => onChange(event.target.value)}
           spellCheck={false}
           autoCapitalize="none"
+          maxLength={7}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-error` : undefined}
+          aria-describedby={error ? `${id}-error` : `${id}-hint`}
           className="font-mono"
         />
       </div>
     </Field>
-  );
-}
-
-function SaveBar() {
-  const { pending } = useFormStatus();
-  return (
-    <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-20 z-20 -mx-4 border-t px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:bottom-0">
-      <Button
-        type="submit"
-        disabled={pending}
-        className="bg-brand text-brand-foreground hover:bg-brand-strong w-full sm:w-auto"
-      >
-        {pending ? (
-          <>
-            <Loader2 className="size-4 animate-spin" />
-            Saving…
-          </>
-        ) : (
-          "Save changes"
-        )}
-      </Button>
-    </div>
   );
 }
 
@@ -114,31 +89,36 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
   );
   const [primaryColor, setPrimaryColor] = useState(brand.primaryColor);
   const [accentColor, setAccentColor] = useState(brand.accentColor);
+  const [timezone, setTimezone] = useState(brand.timezone);
 
   useEffect(() => {
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
   const errors = state.fieldErrors ?? {};
+  const timezoneOptions = TIMEZONES.includes(timezone)
+    ? TIMEZONES
+    : [timezone, ...TIMEZONES];
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
-      {state.status === "error" && state.message ? (
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      ) : null}
+    <form action={formAction} className="space-y-5 pb-4" noValidate>
+      <FormAlert state={state} />
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Business identity</CardTitle>
           <CardDescription>
-            Shown on the landing page, the public enquiry form and throughout the
-            app.
+            Shown on your landing page, the public enquiry form and throughout
+            the app.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Field id="businessName" label="Business name" error={errors.businessName}>
+          <Field
+            id="businessName"
+            label="Business name"
+            error={errors.businessName}
+            required
+          >
             <Input
               id="businessName"
               name="businessName"
@@ -146,14 +126,16 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               required
               maxLength={120}
               aria-invalid={Boolean(errors.businessName)}
-              aria-describedby={errors.businessName ? "businessName-error" : undefined}
+              aria-describedby={
+                errors.businessName ? "businessName-error" : undefined
+              }
             />
           </Field>
 
           <Field
             id="tagline"
             label="Tagline"
-            hint="One short line describing what you offer."
+            hint="One short line describing what you offer. Used as your landing page headline."
             error={errors.tagline}
           >
             <Textarea
@@ -162,13 +144,14 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               defaultValue={brand.tagline}
               maxLength={200}
               rows={2}
+              aria-describedby="tagline-hint"
             />
           </Field>
 
           <Field
             id="logoUrl"
             label="Logo URL"
-            hint="Optional. Paste a hosted image URL — file uploads are not part of this MVP."
+            hint="Optional. Paste a hosted image URL — there are no file uploads in this MVP."
             error={errors.logoUrl}
           >
             <Input
@@ -176,9 +159,11 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               name="logoUrl"
               type="url"
               inputMode="url"
+              autoCapitalize="none"
               defaultValue={brand.logoUrl}
               placeholder="https://…"
               aria-invalid={Boolean(errors.logoUrl)}
+              aria-describedby={errors.logoUrl ? "logoUrl-error" : "logoUrl-hint"}
             />
           </Field>
         </CardContent>
@@ -188,7 +173,7 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
         <CardHeader>
           <CardTitle className="text-base">Colours</CardTitle>
           <CardDescription>
-            Applied instantly across buttons, highlights and charts once saved.
+            Applied across buttons, highlights and charts as soon as you save.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -214,19 +199,27 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="rounded-md px-4 py-2 text-sm font-medium"
-                style={{
-                  backgroundColor: isHexColor(primaryColor) ? primaryColor : undefined,
-                  color: "#fff",
-                }}
+                style={
+                  isHexColor(primaryColor)
+                    ? {
+                        backgroundColor: primaryColor,
+                        color: readableForeground(primaryColor),
+                      }
+                    : undefined
+                }
               >
                 Primary button
               </span>
               <span
                 className="rounded-md px-4 py-2 text-sm font-medium"
-                style={{
-                  backgroundColor: isHexColor(accentColor) ? accentColor : undefined,
-                  color: "#111",
-                }}
+                style={
+                  isHexColor(accentColor)
+                    ? {
+                        backgroundColor: accentColor,
+                        color: readableForeground(accentColor),
+                      }
+                    : undefined
+                }
               >
                 Accent
               </span>
@@ -239,7 +232,7 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
         <CardHeader>
           <CardTitle className="text-base">Contact &amp; location</CardTitle>
           <CardDescription>
-            Optional. Used on the landing page so leads can reach you.
+            Optional. Shown on your landing page so leads can reach you.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
@@ -249,9 +242,11 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               name="contactPhone"
               type="tel"
               inputMode="tel"
+              autoComplete="tel"
               defaultValue={brand.contactPhone}
             />
           </Field>
+
           <Field id="contactEmail" label="Email" error={errors.contactEmail}>
             <Input
               id="contactEmail"
@@ -259,11 +254,20 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               type="email"
               inputMode="email"
               autoCapitalize="none"
+              autoCorrect="off"
               defaultValue={brand.contactEmail}
               aria-invalid={Boolean(errors.contactEmail)}
+              aria-describedby={
+                errors.contactEmail ? "contactEmail-error" : undefined
+              }
             />
           </Field>
-          <Field id="whatsappNumber" label="WhatsApp number" error={errors.whatsappNumber}>
+
+          <Field
+            id="whatsappNumber"
+            label="WhatsApp number"
+            error={errors.whatsappNumber}
+          >
             <Input
               id="whatsappNumber"
               name="whatsappNumber"
@@ -272,6 +276,7 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               defaultValue={brand.whatsappNumber}
             />
           </Field>
+
           <Field
             id="instagramHandle"
             label="Instagram handle"
@@ -283,18 +288,61 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               name="instagramHandle"
               defaultValue={brand.instagramHandle}
               autoCapitalize="none"
+              autoCorrect="off"
+              aria-describedby="instagramHandle-hint"
             />
           </Field>
+
           <Field id="addressLine" label="Address" error={errors.addressLine}>
             <Input
               id="addressLine"
               name="addressLine"
+              autoComplete="street-address"
               defaultValue={brand.addressLine}
             />
           </Field>
+
           <Field id="city" label="City" error={errors.city}>
-            <Input id="city" name="city" defaultValue={brand.city} />
+            <Input
+              id="city"
+              name="city"
+              autoComplete="address-level2"
+              defaultValue={brand.city}
+            />
           </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Regional</CardTitle>
+          <CardDescription>
+            Controls how dates and prices are displayed and when a day rolls
+            over.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <Field
+            id="timezone"
+            label="Timezone"
+            hint="Used for follow-up dates and membership expiry."
+            error={errors.timezone}
+          >
+            <input type="hidden" name="timezone" value={timezone} />
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger id="timezone" className="w-full">
+                <SelectValue placeholder="Select a timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {timezoneOptions.map((zone) => (
+                  <SelectItem key={zone} value={zone}>
+                    {zone.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
           <Field
             id="currency"
             label="Currency code"
@@ -306,13 +354,20 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
               name="currency"
               defaultValue={brand.currency}
               maxLength={8}
+              autoCapitalize="characters"
               className="uppercase"
+              aria-invalid={Boolean(errors.currency)}
+              aria-describedby={
+                errors.currency ? "currency-error" : "currency-hint"
+              }
             />
           </Field>
         </CardContent>
       </Card>
 
-      <SaveBar />
+      <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky bottom-20 z-20 -mx-4 border-t px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 md:bottom-0">
+        <SubmitButton className="w-full sm:w-auto">Save changes</SubmitButton>
+      </div>
     </form>
   );
 }

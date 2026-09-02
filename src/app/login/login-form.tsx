@@ -1,35 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormAlert } from "@/components/form/form-alert";
+import { SubmitButton } from "@/components/form/submit-button";
 import { loginAction } from "@/lib/actions/auth";
 import { idleFormState } from "@/lib/actions/types";
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button
-      type="submit"
-      size="lg"
-      className="bg-brand text-brand-foreground hover:bg-brand-strong w-full"
-      disabled={pending}
-    >
-      {pending ? (
-        <>
-          <Loader2 className="size-4 animate-spin" />
-          Signing in…
-        </>
-      ) : (
-        "Sign in"
-      )}
-    </Button>
-  );
-}
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction] = useActionState(loginAction, idleFormState);
@@ -38,11 +15,7 @@ export function LoginForm({ next }: { next?: string }) {
     <form action={formAction} className="space-y-5" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
-      {state.status === "error" && state.message ? (
-        <Alert variant="destructive" role="alert">
-          <AlertDescription>{state.message}</AlertDescription>
-        </Alert>
-      ) : null}
+      <FormAlert state={state} />
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
@@ -87,7 +60,9 @@ export function LoginForm({ next }: { next?: string }) {
         ) : null}
       </div>
 
-      <SubmitButton />
+      <SubmitButton size="lg" pendingLabel="Signing in…" className="w-full">
+        Sign in
+      </SubmitButton>
     </form>
   );
 }

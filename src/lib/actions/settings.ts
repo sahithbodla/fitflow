@@ -37,6 +37,7 @@ export async function saveBusinessSettingsAction(
     instagramHandle: formData.get("instagramHandle") ?? "",
     addressLine: formData.get("addressLine") ?? "",
     city: formData.get("city") ?? "",
+    timezone: formData.get("timezone") ?? "Asia/Kolkata",
     currency: formData.get("currency") ?? "INR",
   });
 

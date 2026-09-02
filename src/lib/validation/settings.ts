@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHexColor } from "@/lib/colors";
+import { isValidTimeZone } from "@/lib/dates";
 
 const hexColor = z
   .string()
@@ -41,7 +42,18 @@ export const businessSettingsSchema = z.object({
   instagramHandle: optionalText(60),
   addressLine: optionalText(300),
   city: optionalText(120),
-  currency: z.string().trim().min(1).max(8).default("INR"),
+  timezone: z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "Select a valid timezone")
+    .default("Asia/Kolkata"),
+  currency: z
+    .string()
+    .trim()
+    .min(1, "Currency code is required")
+    .max(8, "Currency code is too long")
+    .toUpperCase()
+    .default("INR"),
 });
 
 export type BusinessSettingsInput = z.infer<typeof businessSettingsSchema>;

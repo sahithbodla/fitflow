@@ -3,10 +3,10 @@
 A mobile-first CRM and coaching platform for a fitness business — leads through
 to memberships, personal training and online coaching, in one application.
 
-> **Status: Phase 0 (foundation) complete.** Authentication, branding, the
-> mobile app shell, the landing page and deployment configuration are working.
-> The Lead CRM, conversions, memberships and coaching modules are built in
-> subsequent phases. Navigation entries for unbuilt areas are visibly marked
+> **Status: Phase 1 complete.** Authentication, branding, business settings,
+> user account management, the mobile app shell and a live-metric dashboard are
+> working. The Lead CRM, conversions, memberships and coaching modules are built
+> in subsequent phases. Navigation entries for unbuilt areas are visibly marked
 > "Soon" rather than linking to empty pages.
 
 ---
@@ -141,7 +141,8 @@ Values are never logged.
 | `npm run start` | Serve a production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run check` | lint + typecheck + build |
+| `npm test` | Logic checks (dates, timezones) |
+| `npm run check` | lint + typecheck + test + build |
 | `npm run db:dev` | Local MongoDB for development |
 | `npm run seed:admin` | Create/repair the staff account |
 
@@ -211,15 +212,28 @@ src/
     actions/          server actions
     auth/             password hashing, sessions, route guards
     validation/       Zod schemas
+    collections.ts    canonical MongoDB collection names
+    dashboard.ts      dashboard metric queries
+    dates.ts          timezone-safe date handling
     db.ts             cached Mongoose connection
     env.ts            lazy environment validation
     settings.ts       business settings + branding
   models/             Mongoose models
   proxy.ts            first-gate route protection
 scripts/
+  __checks__/         logic checks run by `npm test`
   dev-db.ts           local MongoDB
   seed-admin.ts       staff account bootstrap
 ```
+
+## Dates and timezones
+
+The business operates in one timezone, set in Business settings. "Today",
+"due" and "expiring soon" are all evaluated against the *business* day rather
+than the server day — otherwise a gym in `Asia/Kolkata` would see follow-ups
+roll over at 5:30am. `src/lib/dates.ts` builds day boundaries with `Intl` and is
+covered by `npm test`, including DST transitions. Month names come from a fixed
+table because ICU renders September as "Sept" in some Node builds.
 
 ---
 
