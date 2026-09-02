@@ -193,6 +193,11 @@ export function daysUntil(
   );
 }
 
+/** Lower-cases a relative label for use mid-sentence ("Expires in 5 days"). */
+export function inSentence(label: string): string {
+  return label.charAt(0).toLowerCase() + label.slice(1);
+}
+
 /** "Today", "Tomorrow", "3 days ago", "In 5 days". */
 export function relativeDayLabel(
   value: Date | string,

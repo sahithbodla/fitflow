@@ -82,20 +82,25 @@ export const getDashboardMetrics = cache(
           status: { $nin: ["converted", "lost"] },
         }),
 
+        // A membership that has not started yet is not active today, so the
+        // start date is checked as well as the expiry.
         count(COLLECTIONS.memberships, {
           category: "gym",
           status: "active",
+          startDate: { $lt: tomorrowStart },
           expiryDate: { $gte: todayStart },
         }),
 
         count(COLLECTIONS.memberships, {
           category: "personal_training",
           status: "active",
+          startDate: { $lt: tomorrowStart },
           expiryDate: { $gte: todayStart },
         }),
 
         count(COLLECTIONS.memberships, {
           status: "active",
+          startDate: { $lt: tomorrowStart },
           expiryDate: { $gte: todayStart, $lt: inSevenDays },
         }),
 

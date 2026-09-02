@@ -3,11 +3,12 @@
 A mobile-first CRM and coaching platform for a fitness business — leads through
 to memberships, personal training and online coaching, in one application.
 
-> **Status: Phase 3 complete.** Authentication, branding, settings, account
-> management, a live-metric dashboard, the full Lead CRM and lead conversion
-> into customers are working. Memberships, payments and the coaching modules
-> are built in subsequent phases. Navigation entries for unbuilt areas are
-> visibly marked "Soon" rather than linking to empty pages.
+> **Status: Phase 4 complete — Phase 1 of the product is demo-ready.** The full
+> path works end to end: landing page → public enquiry → CRM → conversion →
+> customer → membership → renewal → payment, with a dashboard driven by real
+> counts. The online coaching modules (workouts, diet plans, check-ins) are
+> built in later phases. Navigation entries for those are visibly marked "Soon"
+> rather than linking to empty pages.
 
 ---
 
@@ -254,6 +255,30 @@ second record for the same human. One person can hold any combination of gym,
 personal-training and online-coaching conversions; a `{lead, type}` unique index
 means converting the same lead to the same destination twice is a no-op rather
 than a duplicate.
+
+## Memberships
+
+A **MembershipPlan** is what you sell; a **Membership** is one purchased
+period. Selecting a plan *suggests* a duration and price — every membership
+stores its own `planName`, dates and price, so renaming or repricing a plan can
+never rewrite what an existing member bought. Plans deactivate rather than
+delete, for the same reason.
+
+Purchase, start and expiry are three independent dates. Expiry is never
+calculated from the purchase date: a member can pay in September for access
+that begins in October.
+
+**Renewing creates a new row** linked by `renewedFrom` rather than editing the
+old one, so past periods keep their dates and the timeline stays intact. Any
+period in a chain shows the whole history.
+
+Whether a membership is currently usable is **derived from its dates**, not
+stored — so it becomes "expired" the moment the business day rolls over, with
+no scheduled job and no stale rows. Only cancellation is stored, and it wins
+over the dates. The boundary cases are covered by `npm test`.
+
+Payments are recorded manually — there is no gateway — and are tied to a person
+and, optionally, the membership they paid for.
 
 ## Dates and timezones
 

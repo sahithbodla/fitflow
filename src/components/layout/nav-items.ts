@@ -1,10 +1,12 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BadgeCheck,
   CalendarCheck,
   ClipboardList,
   CreditCard,
   Dumbbell,
   LayoutDashboard,
+  Receipt,
   Salad,
   Settings,
   Sparkles,
@@ -20,18 +22,22 @@ export type NavItem = {
   planned?: boolean;
 };
 
-/** The four most frequent areas: these become the mobile bottom bar. */
+/**
+ * The four most frequent areas. These fill the mobile bottom bar alongside the
+ * "More" button, so this list must stay at four entries.
+ */
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: ClipboardList },
-  { href: "/people", label: "Customers", icon: Users },
-  { href: "/coaching", label: "Coaching", icon: Sparkles, planned: true },
+  { href: "/people", label: "People", icon: Users },
+  { href: "/members", label: "Members", icon: BadgeCheck },
 ];
 
 /** Everything else lives behind the "More" sheet on mobile. */
 export const SECONDARY_NAV: NavItem[] = [
-  { href: "/plans", label: "Membership plans", icon: CreditCard, planned: true },
-  { href: "/payments", label: "Payments", icon: CreditCard, planned: true },
+  { href: "/plans", label: "Membership plans", icon: CreditCard },
+  { href: "/coaching", label: "Online coaching", icon: Sparkles, planned: true },
+  { href: "/payments", label: "Payments", icon: Receipt },
   { href: "/exercises", label: "Exercise library", icon: Dumbbell, planned: true },
   { href: "/workouts", label: "Workout templates", icon: Dumbbell, planned: true },
   { href: "/diet", label: "Diet plans", icon: Salad, planned: true },

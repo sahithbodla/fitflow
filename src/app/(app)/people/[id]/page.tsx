@@ -10,6 +10,8 @@ import {
   MessageCircle,
   Pencil,
   Phone,
+  Plus,
+  Receipt,
   Sparkles,
   Target,
   Users,
@@ -25,6 +27,17 @@ import {
 import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { getPerson } from "@/lib/people/queries";
+import {
+  listPersonMemberships,
+  listPersonPayments,
+} from "@/lib/memberships/queries";
+import {
+  CategoryChip,
+  MembershipStatusBadge,
+  PaymentStatusBadge,
+} from "@/components/memberships/membership-badges";
+import { PAYMENT_METHOD_LABELS } from "@/lib/memberships/constants";
+import { formatCurrency } from "@/lib/dates";
 import { formatDate } from "@/lib/dates";
 import { CONVERSION_TYPE_LABELS } from "@/lib/people/constants";
 import { LEAD_SOURCE_LABELS } from "@/lib/leads/constants";
@@ -47,6 +60,11 @@ export default async function PersonDetailPage({
   const brand = await getBrandSettings();
   const person = await getPerson(id);
   if (!person) notFound();
+
+  const [memberships, payments] = await Promise.all([
+    listPersonMemberships(person.id, brand.timezone),
+    listPersonPayments(person.id),
+  ]);
 
   const types = [...new Set(person.conversions.map((row) => row.type))];
 
@@ -132,21 +150,114 @@ export default async function PersonDetailPage({
 
       <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-5">
-          {/* Memberships — populated in the membership phase. */}
+          {/* Membership timeline, newest first. */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="text-muted-foreground size-4" />
+                  Memberships
+                </CardTitle>
+                <Button asChild size="sm" variant="outline" className="shrink-0">
+                  <Link href={`/memberships/new?person=${person.id}`}>
+                    <Plus className="size-4" />
+                    Add
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {memberships.length === 0 ? (
+                <EmptyState
+                  icon={CreditCard}
+                  title="No memberships yet"
+                  description="Add a gym or personal-training membership for this customer."
+                  className="border-0 px-0 py-4"
+                  action={
+                    <Button
+                      asChild
+                      size="sm"
+                      className="bg-brand text-brand-foreground hover:bg-brand-strong"
+                    >
+                      <Link href={`/memberships/new?person=${person.id}`}>
+                        Add membership
+                      </Link>
+                    </Button>
+                  }
+                />
+              ) : (
+                <ul className="divide-y">
+                  {memberships.map((membership) => (
+                    <li key={membership.id} className="py-3 first:pt-0 last:pb-0">
+                      <Link
+                        href={`/memberships/${membership.id}`}
+                        className="group block"
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="group-hover:text-brand font-medium transition-colors">
+                            {membership.planName}
+                          </span>
+                          <MembershipStatusBadge status={membership.effective} />
+                          <CategoryChip category={membership.category} />
+                          {membership.renewedFrom ? (
+                            <span className="text-muted-foreground text-xs">
+                              renewal
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {formatDate(membership.startDate, brand.timezone)} –{" "}
+                          {formatDate(membership.expiryDate, brand.timezone)}
+                          {membership.price !== null
+                            ? ` · ${formatCurrency(membership.price, brand.currency)}`
+                            : ""}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Payment history */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Users className="text-muted-foreground size-4" />
-                Memberships
+                <Receipt className="text-muted-foreground size-4" />
+                Payments
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <EmptyState
-                icon={CreditCard}
-                title="No memberships yet"
-                description="Gym and personal-training memberships, renewals and payments arrive in the next phase."
-                className="border-0 px-0 py-4"
-              />
+              {payments.length === 0 ? (
+                <p className="text-muted-foreground py-2 text-sm">
+                  Nothing recorded yet. Payments are recorded against a
+                  membership.
+                </p>
+              ) : (
+                <ul className="divide-y">
+                  {payments.map((payment) => (
+                    <li
+                      key={payment.id}
+                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          {formatCurrency(payment.amount, payment.currency)}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {formatDate(payment.paymentDate, brand.timezone)} ·{" "}
+                          {PAYMENT_METHOD_LABELS[payment.method]}
+                          {payment.membershipLabel
+                            ? ` · ${payment.membershipLabel}`
+                            : ""}
+                        </p>
+                      </div>
+                      <PaymentStatusBadge status={payment.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 

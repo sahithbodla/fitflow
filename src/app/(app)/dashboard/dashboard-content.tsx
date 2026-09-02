@@ -39,6 +39,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: CalendarCheck,
       tone: "warning" as const,
       hint: "Leads to contact today or overdue",
+      href: "/leads?due=week",
     },
     {
       label: "Expiring in 7 days",
@@ -46,6 +47,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: TriangleAlert,
       tone: "warning" as const,
       hint: "Memberships to renew",
+      href: "/members?state=expiring",
     },
     {
       label: "Expired",
@@ -53,6 +55,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: TriangleAlert,
       tone: "danger" as const,
       hint: "Lapsed memberships",
+      href: "/members?state=expired",
     },
   ];
 
@@ -166,14 +169,19 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {attention.map((item) => (
-              <StatCard
+              <Link
                 key={item.label}
-                label={item.label}
-                value={item.value}
-                hint={item.hint}
-                icon={item.icon}
-                tone={item.tone}
-              />
+                href={item.href}
+                className="rounded-xl transition-opacity hover:opacity-80"
+              >
+                <StatCard
+                  label={item.label}
+                  value={item.value}
+                  hint={item.hint}
+                  icon={item.icon}
+                  tone={item.tone}
+                />
+              </Link>
             ))}
           </div>
         )}
@@ -282,6 +290,12 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
             icon={ClipboardList}
             title="Leads"
             description="Your enquiry pipeline"
+          />
+          <QuickLink
+            href="/members"
+            icon={CreditCard}
+            title="Memberships"
+            description="Active, expiring and expired"
           />
           <QuickLink
             href="/people"
