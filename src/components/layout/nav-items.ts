@@ -36,7 +36,7 @@ export const PRIMARY_NAV: NavItem[] = [
 /** Everything else lives behind the "More" sheet on mobile. */
 export const SECONDARY_NAV: NavItem[] = [
   { href: "/plans", label: "Membership plans", icon: CreditCard },
-  { href: "/coaching", label: "Online coaching", icon: Sparkles, planned: true },
+  { href: "/coaching", label: "Online coaching", icon: Sparkles },
   { href: "/payments", label: "Payments", icon: Receipt },
   { href: "/exercises", label: "Exercise library", icon: Dumbbell, planned: true },
   { href: "/workouts", label: "Workout templates", icon: Dumbbell, planned: true },

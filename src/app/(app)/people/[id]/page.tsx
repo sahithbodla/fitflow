@@ -27,6 +27,7 @@ import {
 import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { getPerson } from "@/lib/people/queries";
+import { getCoachingClientForPerson } from "@/lib/coaching/queries";
 import {
   listPersonMemberships,
   listPersonPayments,
@@ -61,9 +62,10 @@ export default async function PersonDetailPage({
   const person = await getPerson(id);
   if (!person) notFound();
 
-  const [memberships, payments] = await Promise.all([
+  const [memberships, payments, coachingClient] = await Promise.all([
     listPersonMemberships(person.id, brand.timezone),
     listPersonPayments(person.id),
+    getCoachingClientForPerson(person.id),
   ]);
 
   const types = [...new Set(person.conversions.map((row) => row.type))];
@@ -270,7 +272,7 @@ export default async function PersonDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {person.coaching ? (
+              {person.coaching && coachingClient ? (
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <CoachingStatusBadge status={person.coaching.status} />
@@ -284,15 +286,23 @@ export default async function PersonDetailPage({
                       {person.coaching.goal}
                     </p>
                   ) : null}
-                  <p className="text-muted-foreground text-xs text-pretty">
-                    Workouts, diet plans and weekly check-ins arrive in a later
-                    phase.
-                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
+                    <Link href={`/coaching/${coachingClient.id}`}>
+                      Open coaching workspace
+                    </Link>
+                  </Button>
                 </div>
               ) : (
-                <p className="text-muted-foreground py-2 text-sm">
-                  Not an online coaching client.
-                </p>
+                <div className="space-y-3">
+                  <p className="text-muted-foreground text-sm">
+                    Not an online coaching client.
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
+                    <Link href={`/coaching/new?person=${person.id}`}>
+                      Start online coaching
+                    </Link>
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
