@@ -1,0 +1,1028 @@
+FITNESS BUSINESS CRM + COACHING PLATFORM
+PROGRESSIVE CLAUDE CODE PROMPT PACK
+=================================================
+
+PROJECT GOAL
+------------
+Build a polished, mobile-first full-stack web application for a fitness business/gym owner.
+
+The application should manage the complete journey:
+
+Lead
+ -> CRM follow-up
+ -> Conversion
+ -> Gym Member / PT Client / Online Coaching Client
+ -> Membership management
+ -> Coaching management
+ -> Workout plans
+ -> Diet plans
+ -> Weekly check-ins
+
+IMPORTANT MVP BOUNDARIES
+------------------------
+Build only ONE authenticated internal staff role for now. Do not build trainer, coach, client, member, or other role-based access control yet. The single authenticated user should have access to the whole MVP.
+
+Do NOT build:
+- Instagram DM integration
+- AI assistant
+- Automated Instagram replies
+- Actual payment gateway integration
+- Client-facing portal
+- Progress photo uploads
+- Multi-branch support
+- Advanced role management
+
+These may be added only in future phases after MVP validation.
+
+PRIMARY PRODUCT REQUIREMENTS
+----------------------------
+1. Mobile-first web application.
+2. Excellent UI/UX. The app should feel lightweight, intuitive and pleasant rather than like a complicated enterprise dashboard.
+3. Responsive on mobile, tablet and desktop.
+4. One authenticated internal user role for MVP.
+5. Configurable branding: gym/business name, logo and primary/accent colors.
+6. Email + password authentication.
+7. Public lead capture form accessible without login.
+8. Manual lead creation inside the app.
+9. CRM pipeline:
+   New -> Contacted -> Interested -> Follow-up -> Converted -> Lost
+10. Convert a lead into:
+   - Gym Member
+   - PT Client
+   - Online Coaching Client
+11. Membership management with:
+   - Different membership plans
+   - Custom start date
+   - Custom expiry date
+   - Separate gym membership and PT membership
+   - Renewal history
+   - Manual payment recording only
+12. Online coaching management.
+13. Workout templates plus client-specific/custom workouts.
+14. Exercise library with optional YouTube/external video URLs.
+15. Diet plans in Phase 2.
+16. Weekly check-ins:
+   - Weight
+   - Diet adherence, optional
+   - Workout adherence, optional
+   - Questions
+17. No photos for MVP.
+
+RECOMMENDED TECH STACK
+----------------------
+Use a single repository and a single full-stack application.
+
+- Next.js (latest stable version compatible with the environment)
+- TypeScript
+- App Router
+- Tailwind CSS
+- shadcn/ui or similarly high-quality accessible component primitives
+- MongoDB Atlas
+- Mongoose
+- Zod for validation
+- React Hook Form where useful
+- Email + password authentication using a mature Next.js-compatible auth approach
+- bcrypt or another secure password hashing approach
+- Server-side route protection
+- Server-side authorization checks even though there is one role for now
+- Lucide icons
+- A clean chart library only where charts genuinely improve UX
+- Dockerfile suitable for Render deployment
+- Environment variables via .env.local
+- .env.example committed without secrets
+
+HOSTING
+-------
+For this MVP, target:
+- Application: Render
+- Database: MongoDB Atlas free tier
+
+Do not use Render local disk for persistent application data.
+
+No file storage provider is required for MVP because photos/uploads are out of scope.
+
+REQUIRED ENVIRONMENT VARIABLES
+------------------------------
+Use names similar to the following, adapting only if the selected authentication library genuinely requires different names:
+
+MONGODB_URI=
+AUTH_SECRET=
+AUTH_URL=
+NEXT_PUBLIC_APP_URL=
+
+Optional, only if genuinely required:
+SEED_ADMIN_EMAIL=
+SEED_ADMIN_PASSWORD=
+
+The user will provide real values. Never invent production secrets.
+
+PROJECT QUALITY RULES
+---------------------
+- Strict TypeScript.
+- Avoid any unnecessary `any`.
+- Keep business logic out of UI components where practical.
+- Validate all user input.
+- Handle loading, empty, success and error states.
+- Prevent duplicate form submissions.
+- Use accessible labels and keyboard-friendly controls.
+- Use confirmation dialogs for destructive actions.
+- Use soft deletion or explicit archival where historical business data should not disappear.
+- Preserve historical membership/payment/renewal records.
+- Use sensible database indexes.
+- Never expose secrets to the browser.
+- Never trust client-provided IDs or privileged fields without server-side validation.
+- Keep code modular and readable.
+- Do not over-engineer microservices. This is one full-stack application.
+- Before each major phase, inspect the existing codebase and verify the previous phase.
+- Never blindly overwrite working code.
+- Run the application/build/tests and fix errors before declaring a phase complete.
+- At the end of every phase, provide a concise verification report and list any manual actions still required.
+
+UI/UX DESIGN DIRECTION
+----------------------
+The design quality is a first-class requirement.
+
+The application should:
+- Feel modern, premium and calm.
+- Be optimized for one-handed mobile use.
+- Use clear visual hierarchy.
+- Avoid dense tables on small screens.
+- Prefer cards, grouped sections, bottom sheets, drawers and progressive disclosure on mobile where appropriate.
+- Use desktop layouts efficiently without making mobile feel like a squeezed desktop dashboard.
+- Have clear primary actions.
+- Keep forms short and logically grouped.
+- Use sensible defaults and inline validation.
+- Show contextual empty states with useful calls to action.
+- Use clear status badges.
+- Use a consistent spacing and typography system.
+- Avoid excessive gradients, excessive animations and decorative clutter.
+- Avoid making every screen look like a generic admin template.
+- Keep the landing page visually strong and conversion-focused.
+- Make the public lead form extremely easy to complete on mobile.
+
+Suggested mobile navigation:
+- Bottom navigation for the most frequent areas where appropriate.
+- Overflow/menu for less frequent sections.
+Do not blindly implement this if another navigation pattern is demonstrably more intuitive.
+
+DATA MODEL CONCEPT
+------------------
+Do not treat this as an immutable schema specification. Improve the schema where needed while preserving these concepts.
+
+BusinessSettings
+- businessName
+- logoUrl or logo representation suitable for MVP
+- primaryColor
+- accentColor
+- contact details as needed
+- address/location as needed
+- timestamps
+
+User
+- name
+- email
+- passwordHash
+- active
+- timestamps
+
+Lead
+- name
+- phone
+- email optional
+- instagramHandle optional
+- fitnessGoal optional
+- interestedIn:
+  gym | personal_training | online_coaching
+- source:
+  public_form | manual | other
+- status:
+  new | contacted | interested | follow_up | converted | lost
+- followUpDate optional
+- notes/history
+- timestamps
+
+Person / Customer
+Consider whether Lead should be converted into a reusable Person/Customer record to avoid duplicated identity data. Preserve source and conversion history.
+
+Conversion
+- lead reference
+- conversion type
+- conversion date
+- notes
+
+MembershipPlan
+- name
+- category:
+  gym | personal_training
+- default duration optional
+- default price optional
+- active/inactive
+
+Membership
+- person/customer
+- plan
+- category
+- startDate
+- expiryDate
+- purchaseDate
+- status:
+  active | expired | cancelled | paused if implemented
+- custom price optional
+- notes
+- timestamps
+
+MembershipRenewalHistory
+Can be a dedicated collection or a robust historical model. The UI must show a clear timeline of previous and renewed memberships.
+
+PaymentRecord
+Manual records only:
+- related person
+- related membership/client context
+- amount
+- paymentDate
+- method:
+  cash | upi | card | bank_transfer | other
+- status
+- notes
+
+CoachingClient
+- person/customer
+- status
+- start date
+- assigned details if useful for future expansion
+- goal
+- notes
+
+Exercise
+- name
+- category optional
+- instructions optional
+- externalVideoUrl optional
+- active
+- timestamps
+
+WorkoutTemplate
+- name
+- description
+- goal optional
+- number of days optional
+- structured days and exercises
+- active
+- timestamps
+
+ClientWorkoutPlan
+- coaching client
+- template reference optional
+- custom snapshot/structured workout data
+- start date
+- active
+- history/version information where practical
+
+DietPlan
+- coaching client
+- title
+- meals/sections
+- notes
+- calories/macros optional
+- active
+- timestamps
+
+WeeklyCheckIn
+- coaching client
+- checkInDate
+- weight
+- dietAdherence optional
+- workoutAdherence optional
+- questions optional
+- coach/internal notes optional
+- timestamps
+
+Audit/history:
+For critical actions such as conversion, membership creation/renewal and status changes, preserve enough history to understand what happened.
+
+PROMPT EXECUTION STRATEGY
+-------------------------
+Use the prompts below progressively. Do not skip verification.
+
+The user may leave Claude Code running unattended. Therefore every prompt must:
+1. Inspect current repository state.
+2. Verify prerequisites before changing code.
+3. Verify required environment configuration.
+4. If a prerequisite is missing, stop safely and clearly document exactly what is missing instead of fabricating values.
+5. Preserve working code.
+6. Run automated checks after implementation.
+7. Attempt to fix its own errors.
+8. Leave the repository in a runnable state.
+
+=================================================
+PROMPT 0: FOUNDATION, ENVIRONMENT VERIFICATION AND PROJECT SETUP
+=================================================
+
+You are building a production-quality MVP (FitFlow), but this is still an MVP and should remain pragmatic.
+
+FIRST: INSPECT AND VERIFY BEFORE BUILDING ANYTHING.
+
+1. Inspect the current repository and determine:
+   - whether a Next.js project already exists
+   - package manager in use
+   - Node.js version requirements
+   - existing environment files
+   - existing source structure
+   - existing git state
+   - whether any partially built code already exists
+
+2. Do not overwrite or delete existing useful code without understanding it.
+
+3. Verify environment configuration before implementation:
+   - Check whether MONGODB_URI exists.
+   - Validate that its format appears to be a MongoDB connection string.
+   - Attempt a safe database connectivity check if credentials are available.
+   - Check whether AUTH_SECRET is configured.
+   - Check whether AUTH_URL/NEXT_PUBLIC_APP_URL is configured where required by the selected authentication approach.
+   - Never print secrets in logs or output.
+
+4. If MONGODB_URI is missing or database connectivity fails:
+   - Do NOT invent a MongoDB URL.
+   - Create/update .env.example with the required variables.
+   - Explain clearly in the final verification report what exact value the user must provide.
+   - Stop database-dependent implementation safely if continuing would produce fake behavior.
+
+5. If the repository is empty and environment prerequisites are valid, initialize the application using the recommended stack:
+   - Next.js
+   - TypeScript
+   - Tailwind CSS
+   - App Router
+   - MongoDB Atlas via Mongoose
+   - Zod
+   - React Hook Form where useful
+   - polished accessible UI component primitives
+
+6. Configure:
+   - strict TypeScript
+   - linting
+   - formatting if useful
+   - environment validation
+   - centralized database connection handling suitable for serverless/Render environments
+   - application error handling
+   - reusable validation utilities
+   - .env.example
+   - README with local setup instructions
+   - Render-compatible Dockerfile or deployment configuration
+   - a health endpoint that can verify basic application health without exposing secrets
+
+7. Authentication:
+   - Implement email + password authentication.
+   - Use secure password hashing.
+   - Protect authenticated application routes.
+   - Do not build multiple roles yet.
+   - Implement a practical initial-admin bootstrap strategy that does not expose a public admin-registration loophole.
+   - Prefer a documented seed/bootstrap command using environment variables or another secure MVP-friendly method.
+
+8. Branding:
+   - Create configurable business branding architecture.
+   - For MVP, settings can initially be managed by the authenticated user inside the app.
+   - Support business name and visual color settings.
+   - Keep implementation extensible for logo support.
+
+9. Create the initial mobile-first shell:
+   - Public landing page route
+   - Public lead form placeholder route
+   - Login route
+   - Protected application shell
+   - Dashboard placeholder
+   - Responsive navigation
+
+10. Landing page:
+   Build a polished landing page for the gym/fitness business. It should be configurable enough to use business branding later.
+   The landing page should clearly communicate services such as gym membership, personal training and online coaching.
+   Include strong CTA(s) leading to the public lead capture flow.
+   Do not use fake testimonials or fabricated business metrics.
+
+11. Dashboard:
+   Create a clean initial dashboard shell with placeholders that will be populated by later phases.
+   Do not fabricate business analytics.
+
+12. Verification:
+   - Run lint.
+   - Run TypeScript checks.
+   - Run production build.
+   - Run the app if the environment supports it.
+   - Verify database connectivity if configured.
+   - Verify login protection and logout.
+   - Verify mobile layout at common narrow viewport widths.
+   - Fix errors discovered during verification.
+
+13. Stop only when the repository is stable.
+
+At the end provide:
+A. What was detected before building.
+B. Which environment prerequisites were verified successfully.
+C. Which prerequisites are missing, if any.
+D. Exact commands to run locally.
+E. Exact next prompt to use.
+
+Do not begin Phase 1 CRM functionality yet.
+
+=================================================
+PROMPT 1: CORE APP, BRAND SETTINGS AND AUTHENTICATED DASHBOARD
+=================================================
+
+Before implementation:
+1. Inspect the existing project.
+2. Run the existing checks.
+3. Verify that Prompt 0 functionality still works.
+4. Verify database connectivity without exposing secrets.
+5. If a prerequisite is broken, repair it before adding features.
+
+Now implement the core authenticated application experience.
+
+Requirements:
+- One internal authenticated user role only.
+- Mobile-first protected application.
+- Configurable branding/settings.
+- Excellent UX.
+
+Build:
+1. Dashboard home.
+2. Business Settings page.
+3. User account basics.
+4. Responsive navigation.
+5. Empty-state aware dashboard cards.
+
+Business Settings should allow:
+- Business/gym name
+- Primary color
+- Accent color
+- Basic contact details
+- Address/location if useful
+- Any MVP-safe branding settings
+
+Dashboard should initially include useful zero-state summaries, such as:
+- New leads
+- Follow-ups due
+- Active gym memberships
+- Memberships expiring soon
+- Active coaching clients
+- Check-ins due/recent
+
+Do not invent data. Empty states should guide the user toward adding data.
+
+UI requirements:
+- On mobile, frequent actions should be easy to reach.
+- Avoid wide tables.
+- Use cards and clear action buttons.
+- Use accessible forms.
+- Add loading and error states.
+
+Verification:
+- Existing authentication still works.
+- Settings persist.
+- Protected routes remain protected.
+- Dashboard works with empty database.
+- Dashboard works with sample test data if safe seed data exists.
+- Mobile layouts are checked.
+- Run lint, type checks and production build.
+- Fix discovered errors.
+
+Do not build lead CRM yet beyond dashboard placeholders.
+
+=================================================
+PROMPT 2: LEAD CRM
+=================================================
+
+Before implementation:
+1. Inspect current code.
+2. Run existing verification.
+3. Verify authentication, database and previous pages.
+4. Fix regressions before proceeding.
+
+Build the Lead CRM.
+
+Lead fields:
+- Name, required
+- Phone, required
+- Email, optional
+- Instagram handle, optional
+- Fitness goal, optional
+- Interested in:
+  Gym Membership
+  Personal Training
+  Online Coaching
+- Source:
+  Public Form
+  Manual
+  Other
+- Status:
+  New
+  Contacted
+  Interested
+  Follow-up
+  Converted
+  Lost
+- Follow-up date, optional
+- Notes/history
+
+Required functionality:
+
+A. Manual lead creation inside the authenticated app.
+B. Public lead capture form without login.
+C. Public form must be mobile-first, short, clear and conversion-friendly.
+D. Leads list.
+E. Search.
+F. Filtering by status, interest and source.
+G. Lead detail page.
+H. Status changes.
+I. Follow-up date.
+J. Follow-up reminders/visual indicators inside the app.
+K. Notes and activity/history.
+L. Duplicate handling for phone/email where reasonable.
+M. Do not allow public users to set privileged status fields.
+
+Public lead form:
+- Use the business branding.
+- Ask only for information useful to the lead.
+- On success, show a clear confirmation.
+- Protect against accidental duplicate submissions and basic abuse where practical.
+- Do not add a payment flow.
+
+CRM UX:
+- On desktop, a clean list/table view is acceptable.
+- On mobile, use responsive cards or an appropriate adaptive presentation.
+- Make adding a lead and changing lead status fast.
+
+Verification:
+- Public submission creates a lead.
+- Manual creation works.
+- Search and filters work.
+- Follow-up dates display correctly.
+- Protected pages remain protected.
+- Public form cannot access internal data.
+- Run lint, type checks and production build.
+- Check mobile UX.
+- Fix errors.
+
+Do not build conversion yet.
+
+=================================================
+PROMPT 3: LEAD CONVERSION AND CUSTOMER LIFECYCLE
+=================================================
+
+Before implementation:
+- Verify all previous features.
+- Verify database integrity.
+- Inspect existing models before changing relationships.
+
+Implement lead conversion.
+
+A lead can be converted into:
+1. Gym Member
+2. PT Client
+3. Online Coaching Client
+
+Important:
+- Avoid duplicating the person's identity data unnecessarily.
+- Preserve the original lead and its source/history.
+- Make conversion auditable.
+- Do not delete the lead.
+- Prevent accidental duplicate conversions.
+- Provide confirmation before conversion.
+
+Recommended UX:
+Lead Detail
+ -> Convert Lead
+ -> Choose destination
+ -> Review information
+ -> Create destination record
+
+Conversion outcomes:
+
+A. Convert to Gym Member:
+Create/prepare the person/member profile and take the user to membership setup.
+
+B. Convert to PT Client:
+Create/prepare the person profile and allow PT membership setup.
+
+C. Convert to Online Coaching Client:
+Create/prepare coaching client profile.
+
+A single person should be able to have both a gym membership and PT membership if the business needs that.
+
+Create a reusable person/customer detail view where appropriate:
+- Basic profile
+- Original lead information/source
+- Membership history
+- Coaching status
+- Payments/history where applicable
+
+Verification:
+- Convert each destination type.
+- Verify original lead history is preserved.
+- Verify duplicate identity records are not unnecessarily created.
+- Verify one person can hold separate gym and PT memberships.
+- Verify invalid conversion paths are handled.
+- Run all checks and fix errors.
+
+=================================================
+PROMPT 4: GYM + PT MEMBERSHIP MANAGEMENT
+=================================================
+
+Before implementation:
+- Verify previous features.
+- Review existing customer/person/conversion models.
+- Do not introduce duplicate records.
+
+Build membership management.
+
+Membership plan management:
+- Create plan
+- Edit plan
+- Activate/deactivate plan
+- Categories:
+  Gym Membership
+  Personal Training
+- Default duration optional
+- Default/default suggested price optional
+
+Membership creation:
+For every membership support:
+- Person/customer
+- Membership plan
+- Category
+- Purchase date
+- Custom start date
+- Custom expiry date
+- Custom price if needed
+- Status
+- Notes
+
+Do not force expiry to be calculated from purchase date. The user explicitly needs custom dates.
+
+Support:
+- Different plans
+- Different dates per person
+- Separate gym and PT memberships
+- Renewal history
+- Historical records
+
+Renewal flow:
+- Start from an existing membership/person.
+- Create a new renewal record or successor membership while preserving history.
+- Make the timeline easy to understand.
+- Never overwrite the historical purchase/expiry dates in a way that loses history.
+
+Membership statuses should support at least:
+- Active
+- Expired
+- Cancelled
+Potentially Paused if implemented cleanly, but do not add complexity without value.
+
+Membership UX:
+- Member list
+- Membership detail
+- Person profile timeline
+- Expiring soon view
+- Expired view
+- Renewal action
+- Search/filter
+
+Manual payment records:
+No payment gateway.
+
+Allow recording:
+- Amount
+- Payment date
+- Payment method:
+  Cash
+  UPI
+  Card
+  Bank Transfer
+  Other
+- Payment status
+- Notes
+
+Payment records should be historical and tied to the relevant person/membership context.
+
+Dashboard integration:
+Show useful real data such as:
+- Active memberships
+- Expiring soon
+- Expired
+- Follow-ups due
+
+Date handling:
+- Use timezone-safe handling.
+- Clearly define how expiry is displayed.
+- Test boundary dates.
+
+Verification:
+- Create different plans.
+- Create memberships with custom dates.
+- Create both gym and PT memberships for one person.
+- Renew membership and verify history.
+- Record multiple payments.
+- Verify expiring/expired filters.
+- Test empty states.
+- Test mobile layouts.
+- Run all automated checks and production build.
+- Fix all discovered errors.
+
+At the end, Phase 1 should be a coherent and demo-ready MVP:
+Landing page -> public lead capture -> CRM -> conversion -> customer/member -> membership/PT management.
+
+=================================================
+PROMPT 5: PHASE 2 - ONLINE COACHING CLIENT MANAGEMENT
+=================================================
+
+Before implementation:
+- Verify the complete Phase 1 flow end-to-end.
+- Fix regressions before adding Phase 2.
+
+Build internal online coaching client management.
+
+Important:
+- There is still NO client-facing portal.
+- The authenticated internal user manages everything.
+
+Coaching client profile should include:
+- Person/customer details
+- Goal
+- Coaching start date
+- Status
+- Notes
+- Linked original lead/source if available
+- Linked workouts
+- Linked diet plans
+- Weekly check-ins
+
+Features:
+- Coaching client list
+- Search/filter
+- Client detail page
+- Active/inactive status
+- Add/edit notes
+- Quick navigation to workout, diet and check-ins
+
+Make the client detail page a strong central workspace, but do not overload one screen.
+Use tabs/sections/drawers/progressive disclosure where appropriate.
+
+Verification:
+- Convert a lead into an online coaching client.
+- Create coaching client manually if needed for operational flexibility.
+- Ensure identity data is not duplicated unnecessarily.
+- Verify mobile UX.
+- Run checks and fix errors.
+
+=================================================
+PROMPT 6: PHASE 2 - EXERCISE LIBRARY AND WORKOUT SYSTEM
+=================================================
+
+Before implementation:
+- Verify Phase 1 and coaching client functionality.
+- Inspect existing schemas.
+
+Build:
+
+A. Exercise Library
+Fields:
+- Exercise name
+- Category optional
+- Instructions optional
+- External video URL optional
+- Active/inactive
+
+External video:
+- Support YouTube or other valid external URLs.
+- Validate URL format.
+- Do not upload video files.
+
+B. Workout Templates
+Support reusable templates with:
+- Name
+- Description
+- Goal optional
+- Multiple workout days
+- Exercises per day
+- Sets
+- Reps
+- Rest/instructions optional
+- Exercise notes
+
+C. Client-Specific Workouts
+The internal user must be able to:
+1. Assign a workout template to a coaching client.
+2. Customize the assigned workout for that client.
+3. Create a completely custom workout without a template.
+
+Important:
+Do not accidentally mutate a global template when customizing one client's plan.
+Use a snapshot/copy/version approach where appropriate.
+
+UX:
+- Template list
+- Template builder
+- Client assignment flow
+- Client workout detail
+- Custom edit flow
+- Mobile-friendly exercise editing
+
+Verification:
+- Create exercise.
+- Create template.
+- Assign template.
+- Customize assigned plan.
+- Verify original template remains unchanged.
+- Create fully custom client workout.
+- Test validation.
+- Run all checks.
+
+=================================================
+PROMPT 7: PHASE 2 - DIET PLAN MANAGEMENT
+=================================================
+
+Before implementation:
+- Verify all previous functionality.
+- Preserve clean separation between workouts and diet plans.
+
+Build internal diet plan management for online coaching clients.
+
+The authenticated internal user should be able to:
+- Create diet plans
+- Assign them to a coaching client
+- Edit plans
+- Mark plans active/inactive
+- Maintain history where practical
+
+Diet plan structure should be flexible enough for:
+- Title
+- Goal
+- Meal sections, e.g. Breakfast/Lunch/Dinner/Snacks
+- Foods/items
+- Quantities/servings
+- Notes
+- Optional calorie target
+- Optional protein/macros fields
+
+Do not build an AI diet generator.
+Do not claim medical or nutritional calculations that are not actually implemented.
+
+UX:
+- Simple structured editor.
+- Mobile-friendly.
+- Avoid forcing users through overly complex forms.
+
+Verification:
+- Create/edit diet plan.
+- Assign to client.
+- Show active plan on coaching client detail.
+- Verify old plans/history are not silently lost.
+- Run all checks.
+
+=================================================
+PROMPT 8: PHASE 2 - WEEKLY CHECK-INS AND PROGRESS
+=================================================
+
+Before implementation:
+- Verify all prior features.
+- Confirm there is still no client-facing portal.
+
+Build internal weekly check-in management.
+
+For each coaching client, support recording:
+- Check-in date
+- Weight
+- Diet adherence, optional
+- Workout adherence, optional
+- Questions, optional
+- Internal coach notes, optional
+
+Important:
+The MVP does NOT require clients to submit these themselves.
+The internal authenticated user can record them based on communication with the client.
+
+Progress:
+- Show check-in history.
+- Show weight history.
+- Use a simple chart only if it improves usability.
+- Handle missing optional adherence values gracefully.
+- Do not add photo uploads.
+
+UX:
+- Quick add weekly check-in.
+- Mobile-friendly.
+- Clear history.
+- Easy to see latest weight versus previous entries.
+
+Verification:
+- Add multiple check-ins.
+- Verify history.
+- Verify optional fields.
+- Verify weight trend visualization if implemented.
+- Test empty state.
+- Run all checks.
+
+=================================================
+PROMPT 9: FINAL POLISH, QA AND DEPLOYMENT READINESS
+=================================================
+
+This is a full regression and quality pass.
+
+FIRST:
+- Inspect all existing functionality.
+- Do not rewrite working architecture unnecessarily.
+- Run all available checks.
+
+Perform end-to-end tests for:
+
+PUBLIC FLOW
+1. Landing page
+2. Public lead form
+3. Successful lead creation
+
+CRM FLOW
+4. Manual lead creation
+5. Search/filter
+6. Status updates
+7. Follow-up dates
+8. Lead notes/history
+
+CONVERSION FLOW
+9. Convert to gym member
+10. Convert to PT client
+11. Convert to online coaching client
+
+MEMBERSHIP FLOW
+12. Create plans
+13. Create gym membership
+14. Create PT membership
+15. Custom purchase/start/expiry dates
+16. Renewal
+17. Historical timeline
+18. Manual payment recording
+19. Expiring/expired states
+
+COACHING FLOW
+20. Coaching client profile
+21. Exercise creation
+22. Workout template creation
+23. Template assignment
+24. Client customization without mutating template
+25. Custom workout
+26. Diet plan
+27. Weekly check-ins
+28. Weight history
+
+SECURITY / DATA QUALITY
+29. Authentication protection
+30. Public form cannot access internal data
+31. Input validation
+32. No secret exposure
+33. Duplicate prevention where implemented
+34. Destructive actions protected
+
+UI/UX
+35. Check common mobile widths.
+36. Check tablet.
+37. Check desktop.
+38. Remove awkward horizontal scrolling.
+39. Ensure forms are easy to use.
+40. Improve empty states.
+41. Improve loading/error states.
+42. Ensure navigation is intuitive.
+43. Ensure branding settings are consistently applied.
+
+DEPLOYMENT READINESS
+44. Verify .env.example.
+45. Verify Dockerfile/Render deployment configuration.
+46. Verify production build.
+47. Verify health endpoint.
+48. Update README with:
+    - prerequisites
+    - local setup
+    - environment variables
+    - admin bootstrap
+    - MongoDB Atlas setup requirements
+    - Render deployment steps
+    - post-deployment AUTH_URL/NEXT_PUBLIC_APP_URL configuration
+
+Do not claim a deployment works unless it was actually verified in the available environment.
+
+FINAL REPORT:
+Provide:
+1. Completed features.
+2. Known limitations.
+3. Manual environment/deployment actions still required.
+4. Test/build results.
+5. Suggested future Phase 3 ideas, clearly marked as NOT implemented:
+   - Multiple roles
+   - Client portal
+   - Photo uploads
+   - Instagram DM integration
+   - AI assistant
+   - Automated lead messaging
+   - Multi-branch
+   - Payment gateway
+
+IMPORTANT FINAL PRINCIPLE
+-------------------------
+Do not expand scope just because a feature sounds interesting.
+Prioritize a polished, stable, intuitive MVP that a real gym owner can actually use and evaluate.

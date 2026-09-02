@@ -1,0 +1,27 @@
+# Render blueprint for FitFlow.
+#
+# Secrets are intentionally NOT in this file. After the first deploy, set them
+# in the Render dashboard under Environment:
+#   MONGODB_URI          MongoDB Atlas connection string
+#   AUTH_SECRET          openssl rand -base64 48
+#   NEXT_PUBLIC_APP_URL  https://<your-service>.onrender.com
+#   AUTH_URL             https://<your-service>.onrender.com
+services:
+  - type: web
+    name: fitflow
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: AUTH_URL
+        sync: false
