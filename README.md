@@ -3,12 +3,11 @@
 A mobile-first CRM and coaching platform for a fitness business — leads through
 to memberships, personal training and online coaching, in one application.
 
-> **Status: Phase 4 complete — Phase 1 of the product is demo-ready.** The full
-> path works end to end: landing page → public enquiry → CRM → conversion →
-> customer → membership → renewal → payment, with a dashboard driven by real
-> counts. The online coaching modules (workouts, diet plans, check-ins) are
-> built in later phases. Navigation entries for those are visibly marked "Soon"
-> rather than linking to empty pages.
+> **Status: MVP complete.** The whole journey works end to end — landing page →
+> public enquiry → CRM → conversion → customer → membership → renewal → payment,
+> and online coaching with workout plans, diet plans and weekly check-ins — on a
+> dashboard driven entirely by real counts. See **Known limitations** and
+> **Not built** below for what is deliberately out of scope.
 
 ---
 
@@ -212,12 +211,20 @@ src/
   lib/
     actions/          server actions
     auth/             password hashing, sessions, route guards
+    checkins/         weekly check-in queries and vocabulary
+    coaching/         coaching client queries
+    diet/             diet plan queries and vocabulary
+    leads/            lead queries, phone normalisation, vocabulary
+    memberships/      membership queries and derived status
+    people/           customer queries and conversion vocabulary
+    workouts/         exercise and workout queries
     validation/       Zod schemas
     collections.ts    canonical MongoDB collection names
     dashboard.ts      dashboard metric queries
     dates.ts          timezone-safe date handling
     db.ts             cached Mongoose connection
     env.ts            lazy environment validation
+    rate-limit.ts     in-memory limiter for the public form
     settings.ts       business settings + branding
   models/             Mongoose models
   proxy.ts            first-gate route protection
@@ -226,6 +233,36 @@ scripts/
   dev-db.ts           local MongoDB
   seed-admin.ts       staff account bootstrap
 ```
+
+## Online coaching
+
+A coaching engagement belongs to a **Person**, so identity is never duplicated,
+and a customer can only ever have one. Its workspace is split into Overview,
+Workouts, Diet and Check-ins — driven by the URL (`?tab=`) rather than client
+state, so a section is linkable and survives a refresh.
+
+**Workouts.** Templates are reusable; assigning one **deep-copies** its days
+into the client's own plan, rebuilding every subdocument so the copy shares no
+references. Customising a client's plan can never reach the template or another
+client's plan. Plans can also be built from scratch. Exercise names and video
+links are snapshotted when added, so renaming a library entry never rewrites
+what was prescribed.
+
+**Diet.** Meal sections with foods and free-text quantities. Calorie and macro
+targets are stored exactly as typed — nothing is calculated from the foods, and
+the UI says so rather than implying accuracy the app does not have. A new plan
+supersedes the previous one, which is kept as history.
+
+**Check-ins.** Recorded by the coach, since there is no client portal.
+Everything except the date is optional, and a missing weight stays missing — it
+is skipped when computing changes and plotting, never coerced to zero. The
+weight chart is server-rendered inline SVG with no chart library; its y-axis is
+deliberately not zero-based, so both bounds are labelled and the caption says
+so.
+
+The builders for workouts and diet plans persist every step: each addition or
+edit is its own form posting to a server action, so half-built work cannot be
+lost by navigating away.
 
 ## Public enquiry form
 
@@ -291,9 +328,26 @@ table because ICU renders September as "Sept" in some Node builds.
 
 ---
 
-## Out of scope for this MVP
+## Known limitations
 
-Not built, and not stubbed with fake behaviour: multiple roles, a client-facing
-portal, photo uploads, Instagram DM integration, an AI assistant, automated lead
-messaging, multi-branch support, and payment gateway integration. Payments are
-recorded manually.
+- **Single instance only.** The public form's rate limiter is in-memory
+  (`src/lib/rate-limit.ts`), so limits reset on deploy and are per-instance.
+  Scaling beyond one Render instance means moving it to Redis or the database.
+- **No background jobs.** Membership expiry is derived from dates at read time
+  rather than flipped by a scheduled task. This is a deliberate trade-off — it
+  removes a whole class of stale-data bugs — but it means there is nothing to
+  send a renewal reminder on its own.
+- **Logos are URLs, not uploads.** There is no file storage in this MVP.
+- **One staff account.** There is no invite flow; additional accounts are
+  created with `npm run seed:admin`.
+- **No automated browser tests.** `npm test` covers date/timezone, rate-limit,
+  phone-normalisation and membership-status logic. UI flows were verified
+  manually.
+
+## Not built
+
+Deliberately out of scope, and not stubbed with fake behaviour: multiple roles
+and permissions, a client-facing portal, progress photo uploads, Instagram DM
+integration, an AI assistant or AI diet generator, automated lead messaging,
+multi-branch support, and payment gateway integration. Payments are recorded
+manually.
