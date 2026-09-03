@@ -216,6 +216,35 @@ uploads in this MVP; logos are referenced by URL.
 
 ---
 
+## Deploying to Netlify
+
+The same repo deploys to Netlify too — `netlify.toml` configures the build,
+and `next.config.ts` automatically skips the Docker-only `output: "standalone"`
+setting when it detects Netlify's build environment, so nothing needs to be
+toggled by hand between the two targets.
+
+1. **MongoDB Atlas** — same cluster and network access as the Render steps
+   above; both deployments can point at the same database, or different ones.
+2. **Push this repository** to GitHub (skip if already done for Render).
+3. **Create the Netlify site** — Add new site → Import an existing project →
+   connect the repo. Netlify auto-detects Next.js and picks up `netlify.toml`;
+   no manual build settings are needed.
+4. **Set environment variables** — Site configuration → Environment variables:
+   - `MONGODB_URI`
+   - `AUTH_SECRET`
+   - `NEXT_PUBLIC_APP_URL` — `https://<your-site>.netlify.app`
+   - `AUTH_URL` — same value
+5. **Deploy**, then confirm `https://<your-site>.netlify.app/api/health`
+   returns `200`.
+6. **Create the staff account** — run `npm run seed:admin` locally against the
+   same `MONGODB_URI`, the same way as for Render (Netlify has no shell).
+
+Netlify does not have Render's Shell tab; run any one-off script (`seed:admin`,
+`seed:demo`) locally with the target `MONGODB_URI` passed inline, or via the
+`.github/workflows/seed-production.yml` GitHub Action already in this repo.
+
+---
+
 ## Project structure
 
 ```

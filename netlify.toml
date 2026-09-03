@@ -1,0 +1,25 @@
+# Netlify config for FitFlow, deployed alongside Render from the same repo.
+#
+# Secrets are NOT set here. After connecting the site, set these in the
+# Netlify dashboard under Site configuration → Environment variables:
+#   MONGODB_URI          MongoDB Atlas connection string
+#   AUTH_SECRET          openssl rand -base64 48
+#   NEXT_PUBLIC_APP_URL  https://<your-site>.netlify.app (or your custom domain)
+#   AUTH_URL             same value as NEXT_PUBLIC_APP_URL
+#
+# Next.js is auto-detected and built via Netlify's own Next.js Runtime
+# (@netlify/plugin-nextjs, installed automatically) — no `publish` directory
+# is set here on purpose, the plugin manages its own function output.
+# next.config.ts skips `output: "standalone"` when NETLIFY=true, which
+# Netlify sets during every build — that option is Docker/Render-only and
+# breaks Netlify's build otherwise.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
