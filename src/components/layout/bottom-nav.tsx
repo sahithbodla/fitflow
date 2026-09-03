@@ -73,9 +73,9 @@ export function BottomNav({ user }: { user: CurrentUser }) {
   return (
     <nav
       aria-label="Main"
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
+      className="bg-background/95 supports-backdrop-filter:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
     >
-      <div className="pb-safe grid grid-cols-5">
+      <div className="pb-safe grid touch-manipulation grid-cols-5">
         {PRIMARY_NAV.map((item) => {
           const Icon = item.icon;
           const active = isActivePath(pathname, item.href);
@@ -113,7 +113,7 @@ export function BottomNav({ user }: { user: CurrentUser }) {
           <SheetTrigger asChild>
             <button
               type="button"
-              className="text-muted-foreground flex flex-col items-center gap-1 py-2.5 text-[11px]"
+              className="text-muted-foreground flex touch-manipulation flex-col items-center gap-1 py-2.5 text-[11px]"
             >
               <Menu className="size-5" />
               More

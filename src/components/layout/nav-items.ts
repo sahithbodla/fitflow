@@ -23,19 +23,21 @@ export type NavItem = {
 
 /**
  * The four most frequent areas. These fill the mobile bottom bar alongside the
- * "More" button, so this list must stay at four entries.
+ * "More" button, so this list must stay at four entries. Order matters here —
+ * it's the literal left-to-right layout of the bottom bar, with the third
+ * slot landing center.
  */
 export const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: ClipboardList },
-  { href: "/people", label: "People", icon: Users },
+  { href: "/coaching", label: "Coaching", icon: Sparkles },
   { href: "/members", label: "Members", icon: BadgeCheck },
 ];
 
 /** Everything else lives behind the "More" sheet on mobile. */
 export const SECONDARY_NAV: NavItem[] = [
+  { href: "/people", label: "People", icon: Users },
   { href: "/plans", label: "Membership plans", icon: CreditCard },
-  { href: "/coaching", label: "Online coaching", icon: Sparkles },
   { href: "/payments", label: "Payments", icon: Receipt },
   { href: "/exercises", label: "Exercise library", icon: Dumbbell },
   { href: "/workouts", label: "Workout templates", icon: ListChecks },
