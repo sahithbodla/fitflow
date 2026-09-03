@@ -74,12 +74,13 @@ export const getDashboardMetrics = cache(
         checkInsThisWeek,
         paymentsThisMonth,
       ] = await Promise.all([
-        count(COLLECTIONS.leads, { status: "new" }),
+        count(COLLECTIONS.leads, { status: "new", archivedAt: null }),
 
         // Anything due today or overdue that has not already been resolved.
         count(COLLECTIONS.leads, {
           followUpDate: { $lt: tomorrowStart },
           status: { $nin: ["converted", "lost"] },
+          archivedAt: null,
         }),
 
         // A membership that has not started yet is not active today, so the
@@ -89,6 +90,7 @@ export const getDashboardMetrics = cache(
           status: "active",
           startDate: { $lt: tomorrowStart },
           expiryDate: { $gte: todayStart },
+          archivedAt: null,
         }),
 
         count(COLLECTIONS.memberships, {
@@ -96,27 +98,35 @@ export const getDashboardMetrics = cache(
           status: "active",
           startDate: { $lt: tomorrowStart },
           expiryDate: { $gte: todayStart },
+          archivedAt: null,
         }),
 
         count(COLLECTIONS.memberships, {
           status: "active",
           startDate: { $lt: tomorrowStart },
           expiryDate: { $gte: todayStart, $lt: inSevenDays },
+          archivedAt: null,
         }),
 
         count(COLLECTIONS.memberships, {
           status: { $in: ["active", "expired"] },
           expiryDate: { $lt: todayStart },
+          archivedAt: null,
         }),
 
-        count(COLLECTIONS.coachingClients, { status: "active" }),
+        count(COLLECTIONS.coachingClients, {
+          status: "active",
+          archivedAt: null,
+        }),
 
         count(COLLECTIONS.checkIns, {
           checkInDate: { $gte: sevenDaysAgo, $lt: tomorrowStart },
+          archivedAt: null,
         }),
 
         count(COLLECTIONS.payments, {
           paymentDate: { $gte: monthStart, $lt: nextMonthStart },
+          archivedAt: null,
         }),
       ]);
 
