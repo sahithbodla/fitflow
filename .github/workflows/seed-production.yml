@@ -44,6 +44,32 @@ jobs:
 
       - run: npm ci
 
+      - name: Check secrets are present (never prints values)
+        env:
+          MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+          AUTH_SECRET: ${{ secrets.CI_AUTH_SECRET }}
+        run: |
+          ok=1
+          if [ -z "$MONGODB_URI" ]; then
+            echo "::error::PROD_MONGODB_URI secret is empty or not set."
+            ok=0
+          elif [[ "$MONGODB_URI" != mongodb://* && "$MONGODB_URI" != mongodb+srv://* ]]; then
+            echo "::error::PROD_MONGODB_URI is set but doesn't start with mongodb:// or mongodb+srv://."
+            ok=0
+          else
+            echo "PROD_MONGODB_URI: present, ${#MONGODB_URI} characters, correct prefix."
+          fi
+          if [ -z "$AUTH_SECRET" ]; then
+            echo "::error::CI_AUTH_SECRET secret is empty or not set."
+            ok=0
+          elif [ "${#AUTH_SECRET}" -lt 32 ]; then
+            echo "::error::CI_AUTH_SECRET is set but shorter than 32 characters (${#AUTH_SECRET})."
+            ok=0
+          else
+            echo "CI_AUTH_SECRET: present, ${#AUTH_SECRET} characters."
+          fi
+          [ "$ok" -eq 1 ] || exit 1
+
       - name: Run seed script (${{ inputs.mode }})
         env:
           MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
