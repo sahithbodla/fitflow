@@ -2,11 +2,15 @@
  * Fills the database with realistic demo data so every screen can be walked
  * through end to end.
  *
- *   npm run seed:demo              # add demo data alongside anything already there
- *   npm run seed:demo -- --reset   # wipe ALL business data first, then seed
+ *   npm run seed:demo                  # add demo data alongside anything already there
+ *   npm run seed:demo -- --reset       # wipe ALL business data first, then seed
+ *   npm run seed:demo -- --wipe-only   # wipe ALL business data — do not reseed
  *
- * `--reset` clears leads, customers, memberships, payments, coaching, workouts,
- * diet plans and check-ins. It never touches your login or business settings.
+ * `--reset` and `--wipe-only` both clear leads, customers, memberships,
+ * payments, coaching, workouts, diet plans and check-ins. Neither touches
+ * your login or business settings. `--wipe-only` stops right after clearing —
+ * use it to hand a demo database back to a client empty, e.g. once real
+ * onboarding starts.
  *
  * Every date is relative to today, so the dashboard's "due", "expiring soon"
  * and "expired" buckets are populated whenever you run it.
@@ -17,7 +21,8 @@ import mongoose from "mongoose";
 loadEnv({ path: ".env.local", quiet: true });
 loadEnv({ path: ".env", quiet: true });
 
-const RESET = process.argv.includes("--reset");
+const WIPE_ONLY = process.argv.includes("--wipe-only");
+const RESET = process.argv.includes("--reset") || WIPE_ONLY;
 
 /**
  * Passes seed documents through to Mongoose unchanged.
@@ -116,6 +121,12 @@ async function main() {
     for (const [label, count] of cleared) {
       if (count) console.log(`  cleared ${label}: ${count}`);
     }
+  }
+
+  if (WIPE_ONLY) {
+    console.log("\nDone. Business data cleared; login and settings kept. Nothing reseeded.");
+    await mongoose.disconnect();
+    return;
   }
 
   // ---------------------------------------------------------------- plans --

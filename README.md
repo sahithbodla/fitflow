@@ -120,6 +120,11 @@ whatever is already there.
 Dates are relative to today, so the dashboard's "due", "expiring soon" and
 "expired" buckets are always populated.
 
+To hand a database back empty after a demo — e.g. once a client commits and
+real onboarding starts — use `npm run seed:demo -- --wipe-only`. It clears the
+same business data as `--reset` but does not reseed, and still leaves the
+login and business settings untouched.
+
 ### Run it
 
 ```bash
