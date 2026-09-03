@@ -1,0 +1,57 @@
+name: Seed production data
+
+# Manually triggered from the GitHub app or github.com — Actions tab → this
+# workflow → "Run workflow". Runs scripts/seed-demo.ts against the production
+# database via GitHub Actions secrets, so it doesn't need Render Shell access.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   PROD_MONGODB_URI   the exact MONGODB_URI Render uses in production
+#   CI_AUTH_SECRET      any string 32+ characters — the script never checks
+#                        this value, it only needs to pass env validation, so
+#                        this does NOT need to match the real Render AUTH_SECRET
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "reset = wipe then reseed demo data. wipe-only = wipe and leave empty."
+        required: true
+        type: choice
+        options:
+          - reset
+          - wipe-only
+        default: reset
+      confirm:
+        description: 'Type PRODUCTION to confirm — this runs against the live database.'
+        required: true
+        type: string
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation phrase
+        if: inputs.confirm != 'PRODUCTION'
+        run: |
+          echo "::error::Confirmation phrase did not match. Re-run and type PRODUCTION exactly to proceed."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run seed script (${{ inputs.mode }})
+        env:
+          MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+          AUTH_SECRET: ${{ secrets.CI_AUTH_SECRET }}
+        run: npx tsx scripts/seed-demo.ts --${{ inputs.mode }}
+
+      - name: Summary
+        run: |
+          echo "### Seed complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "Mode: \`${{ inputs.mode }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Triggered by: ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
