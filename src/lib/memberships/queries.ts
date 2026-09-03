@@ -451,7 +451,10 @@ export async function listPayments(filters: {
     const personIds = await Person.find({
       $or: [{ name: pattern }, { phone: pattern }],
     }).distinct("_id");
-    query.person = { $in: personIds.map((id) => String(id)) };
+    // Kept as ObjectIds, not strings: this same filter is reused in the
+    // aggregation below, which bypasses Mongoose casting and would match
+    // nothing — showing rows with a zero total.
+    query.person = { $in: personIds };
   }
 
   const page = Math.max(1, filters.page);

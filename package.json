@@ -11,7 +11,8 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "db:dev": "tsx scripts/dev-db.ts",
     "seed:admin": "tsx scripts/seed-admin.ts",
-    "test": "tsx scripts/__checks__/run.ts"
+    "test": "tsx scripts/__checks__/run.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

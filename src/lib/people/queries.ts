@@ -1,5 +1,5 @@
 import "server-only";
-import type { QueryFilter } from "mongoose";
+import { Types, type QueryFilter } from "mongoose";
 import { connectToDatabase } from "@/lib/db";
 import { Person, type PersonDoc } from "@/models/Person";
 import { Conversion, type ConversionDoc } from "@/models/Conversion";
@@ -66,17 +66,28 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Conversion types per person, resolved in one aggregation. */
+/**
+ * Conversion types per person, resolved in one aggregation.
+ *
+ * The ids must be real ObjectIds: an aggregation pipeline bypasses Mongoose's
+ * casting, and MongoDB compares BSON types strictly, so matching a string
+ * against an ObjectId field silently returns nothing.
+ */
 async function conversionTypesByPerson(
   personIds: string[],
 ): Promise<Map<string, ConversionType[]>> {
   if (personIds.length === 0) return new Map();
 
+  const objectIds = personIds
+    .filter((id) => Types.ObjectId.isValid(id))
+    .map((id) => new Types.ObjectId(id));
+  if (objectIds.length === 0) return new Map();
+
   const rows = await Conversion.aggregate<{
-    _id: string;
+    _id: unknown;
     types: ConversionType[];
   }>([
-    { $match: { person: { $in: personIds.map((id) => id) } } },
+    { $match: { person: { $in: objectIds } } },
     { $group: { _id: "$person", types: { $addToSet: "$type" } } },
   ]);
 

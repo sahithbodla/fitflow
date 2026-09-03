@@ -104,6 +104,22 @@ Re-running is safe — an existing account is left untouched. To change a
 password: `npm run seed:admin -- --reset-password`. Remove the seed variables
 once the account exists.
 
+### Demo data
+
+To walk the whole app through with realistic records:
+
+```bash
+npm run seed:demo -- --reset
+```
+
+`--reset` clears all business data first — leads, customers, memberships,
+payments, coaching, workouts, diet plans and check-ins. It never touches your
+login or business settings. Without the flag the demo data is added alongside
+whatever is already there.
+
+Dates are relative to today, so the dashboard's "due", "expiring soon" and
+"expired" buckets are always populated.
+
 ### Run it
 
 ```bash
@@ -145,6 +161,7 @@ Values are never logged.
 | `npm run check` | lint + typecheck + test + build |
 | `npm run db:dev` | Local MongoDB for development |
 | `npm run seed:admin` | Create/repair the staff account |
+| `npm run seed:demo` | Fill the database with demo data for testing |
 
 ---
 
