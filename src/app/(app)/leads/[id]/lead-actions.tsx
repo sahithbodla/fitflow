@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarClock, Check, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,18 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { FormAlert } from "@/components/form/form-alert";
+import { ConfirmSubmit } from "@/components/form/confirm-submit";
 import { SubmitButton } from "@/components/form/submit-button";
 import { cn } from "@/lib/utils";
 import { idleFormState } from "@/lib/actions/types";
@@ -221,42 +210,26 @@ export function ArchiveLeadButton({
   leadName: string;
 }) {
   const [state, formAction] = useActionState(archiveLeadAction, idleFormState);
-  const router = useRouter();
 
   useEffect(() => {
     if (state.status === "error" && state.message) toast.error(state.message);
-  }, [state, router]);
+  }, [state]);
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="size-4" />
-          Archive lead
-        </Button>
-      </AlertDialogTrigger>
-
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Archive {leadName}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            They&rsquo;ll be hidden from your leads list. Nothing is permanently
-            deleted — the record and its history are kept.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <form action={formAction}>
-            <input type="hidden" name="leadId" value={leadId} />
-            <AlertDialogAction type="submit">Archive</AlertDialogAction>
-          </form>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <form action={formAction}>
+      <input type="hidden" name="leadId" value={leadId} />
+      <ConfirmSubmit
+        variant="ghost"
+        size="sm"
+        destructive
+        className="text-muted-foreground hover:text-destructive"
+        title={`Archive ${leadName}?`}
+        description="They'll be hidden from your leads list. Nothing is permanently deleted — the record and its history are kept."
+        confirmLabel="Archive"
+      >
+        <Trash2 className="size-4" />
+        Archive lead
+      </ConfirmSubmit>
+    </form>
   );
 }

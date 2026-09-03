@@ -7,15 +7,17 @@ import { FormAlert } from "@/components/form/form-alert";
 import { SubmitButton } from "@/components/form/submit-button";
 import { loginAction } from "@/lib/actions/auth";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction] = useActionState(loginAction, idleFormState);
+  const { errors, handleInput, alertState } = useFormErrors(state);
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} onInput={handleInput} className="space-y-5" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
@@ -28,13 +30,13 @@ export function LoginForm({ next }: { next?: string }) {
           autoCapitalize="none"
           autoCorrect="off"
           required
-          aria-invalid={Boolean(state.fieldErrors?.email)}
-          aria-describedby={state.fieldErrors?.email ? "email-error" : undefined}
+          aria-invalid={Boolean(errors.email)}
+          aria-describedby={errors.email ? "email-error" : undefined}
           placeholder="you@yourgym.com"
         />
-        {state.fieldErrors?.email ? (
+        {errors.email ? (
           <p id="email-error" className="text-destructive text-sm">
-            {state.fieldErrors.email}
+            {errors.email}
           </p>
         ) : null}
       </div>
@@ -47,15 +49,15 @@ export function LoginForm({ next }: { next?: string }) {
           type="password"
           autoComplete="current-password"
           required
-          aria-invalid={Boolean(state.fieldErrors?.password)}
+          aria-invalid={Boolean(errors.password)}
           aria-describedby={
-            state.fieldErrors?.password ? "password-error" : undefined
+            errors.password ? "password-error" : undefined
           }
           placeholder="••••••••••"
         />
-        {state.fieldErrors?.password ? (
+        {errors.password ? (
           <p id="password-error" className="text-destructive text-sm">
-            {state.fieldErrors.password}
+            {errors.password}
           </p>
         ) : null}
       </div>

@@ -19,10 +19,11 @@ import {
 } from "@/components/ui/card";
 import { Field } from "@/components/form/field";
 import { FormAlert } from "@/components/form/form-alert";
-import { SubmitButton } from "@/components/form/submit-button";
+import { ConfirmSubmit } from "@/components/form/confirm-submit";
 import { cn } from "@/lib/utils";
 import { convertLeadAction } from "@/lib/actions/conversion";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import {
   CONVERSION_TYPES,
   CONVERSION_TYPE_BLURBS,
@@ -46,11 +47,12 @@ export function ConvertForm({
   match: { id: string; name: string; phone: string } | null;
 }) {
   const [state, formAction] = useActionState(convertLeadAction, idleFormState);
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const [type, setType] = useState<ConversionType>(suggested);
   const [linkPerson, setLinkPerson] = useState(Boolean(match));
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} onInput={handleInput} className="space-y-5" noValidate>
       <input type="hidden" name="leadId" value={leadId} />
       <input type="hidden" name="type" value={type} />
       <input
@@ -59,7 +61,7 @@ export function ConvertForm({
         value={linkPerson && match ? match.id : ""}
       />
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <Card>
         <CardHeader>
@@ -170,7 +172,7 @@ export function ConvertForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Field id="notes" label="Conversion note" error={state.fieldErrors?.notes}>
+          <Field id="notes" label="Conversion note" error={errors.notes}>
             <Textarea
               id="notes"
               name="notes"
@@ -183,9 +185,15 @@ export function ConvertForm({
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
-        <SubmitButton pendingLabel="Converting…" className="w-full sm:w-auto">
+        <ConfirmSubmit
+          title={`Convert ${leadName}?`}
+          description="Creates their customer record and marks the lead converted. The lead and its history are kept."
+          confirmLabel="Convert"
+          pendingLabel="Converting…"
+          className="w-full sm:w-auto"
+        >
           Convert {leadName}
-        </SubmitButton>
+        </ConfirmSubmit>
         <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link href={`/leads/${leadId}`}>Cancel</Link>
         </Button>

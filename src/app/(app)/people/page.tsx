@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ChevronRight, Mail, Phone, Search, Users } from "lucide-react";
+import { ChevronRight, Mail, Phone, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
@@ -50,6 +50,17 @@ export default async function PeoplePage({
             ? `${total} ${total === 1 ? "person" : "people"}`
             : "Members, PT clients and coaching clients."
         }
+        actions={
+          <Button
+            asChild
+            className="bg-brand text-brand-foreground hover:bg-brand-strong"
+          >
+            <Link href="/people/new">
+              <Plus className="size-4" />
+              Add customer
+            </Link>
+          </Button>
+        }
       />
 
       {hasAnyone ? <PeopleFilters typeCounts={typeCounts} /> : null}
@@ -70,14 +81,22 @@ export default async function PeoplePage({
           <EmptyState
             icon={Users}
             title="No customers yet"
-            description="Customers are created when you convert a lead. Open a lead and choose Convert."
+            description="Add someone directly, or convert a lead — either way they become a customer here."
             action={
-              <Button
-                asChild
-                className="bg-brand text-brand-foreground hover:bg-brand-strong"
-              >
-                <Link href="/leads">Go to leads</Link>
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  asChild
+                  className="bg-brand text-brand-foreground hover:bg-brand-strong"
+                >
+                  <Link href="/people/new">
+                    <Plus className="size-4" />
+                    Add customer
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/leads">Go to leads</Link>
+                </Button>
+              </div>
             }
           />
         )

@@ -23,6 +23,7 @@ import { FormAlert } from "@/components/form/form-alert";
 import { SubmitButton } from "@/components/form/submit-button";
 import { saveBusinessSettingsAction } from "@/lib/actions/settings";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { isHexColor, readableForeground } from "@/lib/colors";
 import type { BrandSettings } from "@/lib/settings";
 
@@ -95,14 +96,14 @@ export function SettingsForm({ brand }: { brand: BrandSettings }) {
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const timezoneOptions = TIMEZONES.includes(timezone)
     ? TIMEZONES
     : [timezone, ...TIMEZONES];
 
   return (
-    <form action={formAction} className="space-y-5 pb-4" noValidate>
-      <FormAlert state={state} />
+    <form action={formAction} onInput={handleInput} className="space-y-5 pb-4" noValidate>
+      <FormAlert state={alertState} />
 
       <Card>
         <CardHeader>

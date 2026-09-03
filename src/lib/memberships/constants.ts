@@ -21,14 +21,29 @@ export const MEMBERSHIP_CATEGORY_SHORT: Record<MembershipCategory, string> = {
  * from its dates (see `effectiveStatus`) so no scheduled job is needed to flip
  * rows over at midnight.
  */
-export const MEMBERSHIP_STATUSES = ["active", "expired", "cancelled"] as const;
+export const MEMBERSHIP_STATUSES = [
+  "active",
+  "expired",
+  "cancelled",
+  "terminated",
+] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 
 export const MEMBERSHIP_STATUS_LABELS: Record<MembershipStatus, string> = {
   active: "Active",
   expired: "Expired",
   cancelled: "Cancelled",
+  terminated: "Terminated",
 };
+
+/**
+ * Statuses that end a membership early. Kept apart because who ended it
+ * matters: the member cancelled, or the business terminated them.
+ */
+export const ENDED_STATUSES: readonly MembershipStatus[] = [
+  "cancelled",
+  "terminated",
+];
 
 /** What the UI actually shows, computed from stored status plus today's date. */
 export const EFFECTIVE_STATUSES = [
@@ -37,6 +52,7 @@ export const EFFECTIVE_STATUSES = [
   "expiring_soon",
   "expired",
   "cancelled",
+  "terminated",
 ] as const;
 export type EffectiveStatus = (typeof EFFECTIVE_STATUSES)[number];
 
@@ -46,6 +62,7 @@ export const EFFECTIVE_STATUS_LABELS: Record<EffectiveStatus, string> = {
   expiring_soon: "Expiring soon",
   expired: "Expired",
   cancelled: "Cancelled",
+  terminated: "Terminated",
 };
 
 export const EFFECTIVE_STATUS_CLASSES: Record<EffectiveStatus, string> = {
@@ -57,6 +74,8 @@ export const EFFECTIVE_STATUS_CLASSES: Record<EffectiveStatus, string> = {
   expired: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   cancelled:
     "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+  terminated:
+    "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
 };
 
 /** A membership within this many days of expiry is flagged for renewal. */

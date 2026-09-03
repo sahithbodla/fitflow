@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ChevronRight, Search, Users } from "lucide-react";
+import { ChevronRight, Plus, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
@@ -57,6 +57,17 @@ export default async function MembersPage({
             ? `${total} ${total === 1 ? "membership" : "memberships"}`
             : "Gym and personal-training memberships."
         }
+        actions={
+          <Button
+            asChild
+            className="bg-brand text-brand-foreground hover:bg-brand-strong"
+          >
+            <Link href="/memberships/new">
+              <Plus className="size-4" />
+              Add membership
+            </Link>
+          </Button>
+        }
       />
 
       {hasAny ? <MemberFilters counts={counts} /> : null}
@@ -83,7 +94,10 @@ export default async function MembersPage({
                 asChild
                 className="bg-brand text-brand-foreground hover:bg-brand-strong"
               >
-                <Link href="/people">Go to customers</Link>
+                <Link href="/memberships/new">
+                  <Plus className="size-4" />
+                  Add a membership
+                </Link>
               </Button>
             }
           />

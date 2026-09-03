@@ -11,6 +11,7 @@ import { FormAlert } from "@/components/form/form-alert";
 import { SubmitButton } from "@/components/form/submit-button";
 import { submitPublicLeadAction } from "@/lib/actions/leads";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import {
   LEAD_INTERESTS,
   LEAD_INTEREST_LABELS,
@@ -59,10 +60,11 @@ export function PublicLeadForm({ brand }: { brand: BrandSettings }) {
     submitPublicLeadAction,
     idleFormState,
   );
+  // Called before the early return below: hooks must run in the same order on
+  // every render.
+  const { errors, handleInput, alertState } = useFormErrors(state);
 
   if (state.status === "success") return <SuccessPanel brand={brand} />;
-
-  const errors = state.fieldErrors ?? {};
   // React clears the form once the action settles, so anything the visitor
   // typed is restored from the values the action echoed back.
   const submitted = state.values ?? {};
@@ -81,10 +83,11 @@ export function PublicLeadForm({ brand }: { brand: BrandSettings }) {
       <form
         key={state.values ? JSON.stringify(state.values) : "initial"}
         action={formAction}
+        onInput={handleInput}
         className="space-y-5"
         noValidate
       >
-        <FormAlert state={state} />
+        <FormAlert state={alertState} />
 
         <Field id="name" label="Your name" error={errors.name} required>
           <Input

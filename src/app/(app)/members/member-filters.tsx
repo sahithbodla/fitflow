@@ -15,6 +15,7 @@ const STATES = [
   { value: "expiring", label: "Expiring soon" },
   { value: "expired", label: "Expired" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "terminated", label: "Terminated" },
 ] as const;
 
 export function MemberFilters({

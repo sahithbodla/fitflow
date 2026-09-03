@@ -19,6 +19,7 @@ import { SubmitButton } from "@/components/form/submit-button";
 import { cn } from "@/lib/utils";
 import { saveCheckInAction } from "@/lib/actions/checkins";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
 import {
   ADHERENCE_HINTS,
@@ -120,7 +121,7 @@ export function CheckInForm({
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const values = withSubmittedValues(
     {
       checkInDate: defaults.checkInDate,
@@ -133,7 +134,7 @@ export function CheckInForm({
 
   const body = (
     <div className="space-y-4">
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
@@ -245,6 +246,7 @@ export function CheckInForm({
     <form
       key={state.values ? JSON.stringify(state.values) : "initial"}
       action={formAction}
+      onInput={handleInput}
       ref={formRef}
       className="space-y-5"
       noValidate

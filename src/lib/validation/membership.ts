@@ -91,15 +91,19 @@ export const paymentSchema = z.object({
 
 export type PaymentInput = z.infer<typeof paymentSchema>;
 
-export const cancelMembershipSchema = z.object({
+export const endMembershipSchema = z.object({
   membershipId: z.string().trim().min(1),
+  /** Who ended it: the member cancelled, or the business terminated them. */
+  mode: z.enum(["cancelled", "terminated"]),
   reason: z.string().trim().max(500, "Reason is too long").default(""),
 });
 
 export const memberFilterSchema = z.object({
   q: z.string().trim().max(120).optional(),
   category: z.enum(MEMBERSHIP_CATEGORIES).optional(),
-  state: z.enum(["active", "expiring", "expired", "cancelled"]).optional(),
+  state: z
+    .enum(["active", "expiring", "expired", "cancelled", "terminated"])
+    .optional(),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 });
 

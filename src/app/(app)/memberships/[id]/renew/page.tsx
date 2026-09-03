@@ -9,7 +9,10 @@ import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { getMembership, listActivePlans } from "@/lib/memberships/queries";
 import {
+  DURATION_PRESETS,
   addDaysToInputValue,
+  durationForRange,
+  expiryFromDuration,
   toDateInputValue,
   todayInputValue,
 } from "@/lib/memberships/dates";
@@ -39,6 +42,16 @@ export default async function RenewMembershipPage({
   const today = todayInputValue(brand.timezone);
   const start = dayAfterExpiry > today ? dayAfterExpiry : today;
 
+  // Match the previous period's length. When it corresponds to one of the
+  // presets the renewal reopens on that option; otherwise the exact day count
+  // is carried over and the form shows Custom.
+  const previousStart = toDateInputValue(previous.startDate, brand.timezone);
+  const previousExpiry = toDateInputValue(previous.expiryDate, brand.timezone);
+  const previousDuration = durationForRange(previousStart, previousExpiry);
+  const preset = DURATION_PRESETS.find(
+    (option) => option.value === previousDuration,
+  );
+
   const previousLengthDays = Math.max(
     1,
     Math.round(
@@ -47,6 +60,10 @@ export default async function RenewMembershipPage({
         86_400_000,
     ),
   );
+
+  const renewalExpiry = preset
+    ? expiryFromDuration(start, preset.months)
+    : addDaysToInputValue(start, previousLengthDays);
 
   return (
     <div className="space-y-5">
@@ -89,7 +106,7 @@ export default async function RenewMembershipPage({
           category: previous.category,
           purchaseDate: today,
           startDate: start,
-          expiryDate: addDaysToInputValue(start, previousLengthDays),
+          expiryDate: renewalExpiry,
           price: previous.price !== null ? String(previous.price) : "",
           notes: "",
         }}

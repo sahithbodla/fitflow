@@ -15,6 +15,7 @@ import { Field } from "@/components/form/field";
 import { FormAlert } from "@/components/form/form-alert";
 import { SubmitButton } from "@/components/form/submit-button";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import {
   changePasswordAction,
   updateProfileAction,
@@ -28,10 +29,10 @@ export function ProfileForm({ user }: { user: CurrentUser }) {
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
 
   return (
-    <form action={formAction} noValidate>
+    <form action={formAction} onInput={handleInput} noValidate>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Your details</CardTitle>
@@ -41,7 +42,7 @@ export function ProfileForm({ user }: { user: CurrentUser }) {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <FormAlert state={state} />
+          <FormAlert state={alertState} />
 
           <Field id="name" label="Name" error={errors.name} required>
             <Input
@@ -95,10 +96,10 @@ export function PasswordForm() {
     }
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
 
   return (
-    <form action={formAction} ref={formRef} noValidate>
+    <form action={formAction} ref={formRef} onInput={handleInput} noValidate>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Change password</CardTitle>
@@ -108,7 +109,7 @@ export function PasswordForm() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <FormAlert state={state} />
+          <FormAlert state={alertState} />
 
           <Field
             id="currentPassword"

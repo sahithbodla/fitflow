@@ -20,6 +20,7 @@ import { SubmitButton } from "@/components/form/submit-button";
 import { cn } from "@/lib/utils";
 import { saveExerciseAction } from "@/lib/actions/workouts";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
 import {
   EXERCISE_CATEGORIES,
@@ -49,7 +50,7 @@ export function ExerciseForm({
   );
   const [active, setActive] = useState(defaults.active);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const values = withSubmittedValues(
     {
       name: defaults.name,
@@ -63,13 +64,14 @@ export function ExerciseForm({
     <form
       key={state.values ? JSON.stringify(state.values) : "initial"}
       action={formAction}
+      onInput={handleInput}
       className="space-y-5"
       noValidate
     >
       <input type="hidden" name="category" value={category} />
       <input type="hidden" name="active" value={active ? "yes" : "no"} />
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <Card>
         <CardHeader>

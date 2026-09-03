@@ -21,7 +21,11 @@ export function effectiveStatus(
   timeZone: string,
   now: Date = new Date(),
 ): EffectiveStatus {
+  // Ending early is a decision about the membership, so it wins over the
+  // dates — a terminated membership is not "active" just because today falls
+  // inside its period.
   if (membership.status === "cancelled") return "cancelled";
+  if (membership.status === "terminated") return "terminated";
 
   const daysToExpiry = daysUntil(membership.expiryDate, timeZone, now);
   if (daysToExpiry < 0) return "expired";

@@ -15,8 +15,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import {
   CategoryChip,
   MembershipStatusBadge,
-  PaymentStatusBadge,
 } from "@/components/memberships/membership-badges";
+import { PaymentRow } from "@/components/payments/payment-row";
 import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import {
@@ -31,12 +31,12 @@ import {
   relativeDayLabel,
 } from "@/lib/dates";
 import { todayInputValue } from "@/lib/memberships/dates";
-import {
-  MEMBERSHIP_CATEGORY_LABELS,
-  PAYMENT_METHOD_LABELS,
-} from "@/lib/memberships/constants";
-import { PaymentForm } from "./payment-form";
-import { CancelMembership } from "./cancel-membership";
+import { MEMBERSHIP_CATEGORY_LABELS } from "@/lib/memberships/constants";
+import { PaymentForm } from "@/components/payments/payment-form";
+import { EndMembership } from "./end-membership";
+
+/** How many payments the membership screen shows before linking out. */
+const PAYMENT_PREVIEW_COUNT = 3;
 
 export async function generateMetadata({
   params,
@@ -62,6 +62,8 @@ export default async function MembershipDetailPage({
     listMembershipPayments(membership.id),
   ]);
 
+  const previewPayments = payments.slice(0, PAYMENT_PREVIEW_COUNT);
+
   const collected = payments
     .filter((payment) => payment.status === "paid")
     .reduce((sum, payment) => sum + payment.amount, 0);
@@ -69,7 +71,8 @@ export default async function MembershipDetailPage({
   const outstanding =
     membership.price !== null ? membership.price - collected : null;
 
-  const canRenew = membership.status !== "cancelled";
+  const canRenew =
+    membership.status !== "cancelled" && membership.status !== "terminated";
 
   return (
     <div className="space-y-5">
@@ -150,7 +153,11 @@ export default async function MembershipDetailPage({
 
               {membership.cancelledAt ? (
                 <div className="sm:col-span-3">
-                  <p className="text-muted-foreground text-xs">Cancelled</p>
+                  <p className="text-muted-foreground text-xs">
+                    {membership.status === "terminated"
+                      ? "Terminated"
+                      : "Cancelled"}
+                  </p>
                   <p className="mt-0.5 text-sm">
                     {formatDate(membership.cancelledAt, brand.timezone)}
                     {membership.cancelledReason
@@ -234,30 +241,26 @@ export default async function MembershipDetailPage({
             </CardHeader>
             <CardContent className="space-y-5">
               {payments.length > 0 ? (
-                <ul className="divide-y">
-                  {payments.map((payment) => (
-                    <li
+                <div className="space-y-2.5">
+                  {/* A preview only — the customer's full history is one tap away. */}
+                  {previewPayments.map((payment) => (
+                    <PaymentRow
                       key={payment.id}
-                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">
-                          {formatCurrency(payment.amount, payment.currency)}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {formatDate(payment.paymentDate, brand.timezone)} ·{" "}
-                          {PAYMENT_METHOD_LABELS[payment.method]}
-                        </p>
-                        {payment.notes ? (
-                          <p className="text-muted-foreground/80 mt-0.5 text-xs">
-                            {payment.notes}
-                          </p>
-                        ) : null}
-                      </div>
-                      <PaymentStatusBadge status={payment.status} />
-                    </li>
+                      payment={payment}
+                      timeZone={brand.timezone}
+                      showPerson={false}
+                    />
                   ))}
-                </ul>
+
+                  {payments.length > PAYMENT_PREVIEW_COUNT ? (
+                    <Button asChild variant="outline" className="w-full">
+                      <Link href={`/payments/${membership.personId}`}>
+                        View all {payments.length} payments for{" "}
+                        {membership.personName}
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
               ) : (
                 <p className="text-muted-foreground text-sm">
                   Nothing recorded against this membership yet.
@@ -330,13 +333,19 @@ export default async function MembershipDetailPage({
             </CardContent>
           </Card>
 
-          {membership.status !== "cancelled" ? (
-            <Card>
-              <CardContent className="pt-6">
-                <CancelMembership membershipId={membership.id} />
-              </CardContent>
-            </Card>
-          ) : null}
+          <Card>
+            <CardContent className="pt-6">
+              <EndMembership
+                membershipId={membership.id}
+                personId={membership.personId}
+                planName={membership.planName}
+                alreadyEnded={
+                  membership.status === "cancelled" ||
+                  membership.status === "terminated"
+                }
+              />
+            </CardContent>
+          </Card>
 
           {membership.createdBy ? (
             <p className="text-muted-foreground/80 text-center text-xs">

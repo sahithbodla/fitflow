@@ -57,8 +57,10 @@ const membershipSchema = new Schema(
     notes: { type: String, trim: true, maxlength: 2000, default: "" },
     /** The membership this one renews, forming the history chain. */
     renewedFrom: { type: Types.ObjectId, ref: "Membership", default: null },
+    /** Set when a membership is cancelled or terminated early. */
     cancelledAt: { type: Date, default: null },
     cancelledReason: { type: String, trim: true, maxlength: 500, default: "" },
+    endedBy: { type: String, trim: true, maxlength: 120, default: "" },
     createdBy: { type: String, trim: true, maxlength: 120, default: "" },
     archivedAt: { type: Date, default: null },
   },

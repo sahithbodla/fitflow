@@ -15,8 +15,14 @@ import {
 } from "@/lib/people/constants";
 import {
   convertLeadSchema,
+  createPersonSchema,
   updatePersonSchema,
 } from "@/lib/validation/conversion";
+import { Membership } from "@/models/Membership";
+import { findMatchingPerson } from "@/lib/people/queries";
+import { getBrandSettings } from "@/lib/settings";
+import { effectiveStatus, isCurrentlyActive } from "@/lib/memberships/status";
+import type { MembershipStatus } from "@/lib/memberships/constants";
 import {
   errorState,
   fieldErrorsFromZod,
@@ -228,4 +234,156 @@ export async function updatePersonAction(
   revalidatePath(`/people/${personId}`);
   revalidatePath("/people");
   return successState("Customer details updated.");
+}
+
+
+/**
+ * Creates a customer directly, for walk-ins who never came through a lead.
+ *
+ * Identity still lives in exactly one place: a phone or email that already
+ * belongs to someone is reported rather than silently duplicated.
+ */
+export async function createPersonAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireStaff();
+  if (!user) return errorState("Your session expired. Please sign in again.");
+
+  const parsed = createPersonSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+    email: formData.get("email") ?? "",
+    instagramHandle: formData.get("instagramHandle") ?? "",
+    fitnessGoal: formData.get("fitnessGoal") ?? "",
+    notes: formData.get("notes") ?? "",
+  });
+
+  if (!parsed.success) {
+    return errorState(
+      "Please fix the highlighted fields.",
+      fieldErrorsFromZod(parsed.error),
+      formValues(formData, PERSON_FIELDS),
+    );
+  }
+
+  let personId: string;
+
+  try {
+    await connectToDatabase();
+
+    const existing = await findMatchingPerson(
+      parsed.data.phone,
+      parsed.data.email,
+    );
+    if (existing && formData.get("allowDuplicate") !== "yes") {
+      return {
+        status: "error",
+        message: `${existing.name} (${existing.phone}) is already a customer. Open them, or confirm below to add a separate record.`,
+        fieldErrors: { __duplicate: existing.id },
+        values: formValues(formData, PERSON_FIELDS),
+      };
+    }
+
+    const created = await Person.create({
+      ...parsed.data,
+      phoneNormalized: normalizePhone(parsed.data.phone),
+      sourceLeadId: null,
+      origin: "direct",
+    });
+    personId = String(created._id);
+  } catch {
+    return errorState(
+      "Could not save this customer. Please try again.",
+      undefined,
+      formValues(formData, PERSON_FIELDS),
+    );
+  }
+
+  revalidatePath("/people");
+  revalidatePath("/dashboard");
+  redirect(`/people/${personId}`);
+}
+
+/**
+ * Memberships that must be dealt with before a customer can be deleted.
+ *
+ * Only live ones block: anything already expired, cancelled or terminated is
+ * history and does not stand in the way.
+ */
+export async function getBlockingMemberships(personId: string): Promise<
+  { id: string; planName: string; expiryDate: string }[]
+> {
+  await connectToDatabase();
+  const brand = await getBrandSettings();
+
+  const docs = await Membership.find({
+    person: personId,
+    archivedAt: null,
+  }).lean();
+
+  return docs
+    .filter((doc) => {
+      const status = effectiveStatus(
+        {
+          status: doc.status as MembershipStatus,
+          startDate: doc.startDate,
+          expiryDate: doc.expiryDate,
+        },
+        brand.timezone,
+      );
+      return isCurrentlyActive(status) || status === "upcoming";
+    })
+    .map((doc) => ({
+      id: String(doc._id),
+      planName: doc.planName,
+      expiryDate: doc.expiryDate.toISOString(),
+    }));
+}
+
+/**
+ * Soft-deletes a customer.
+ *
+ * Refused while they still hold a membership that has not run its course —
+ * deleting someone mid-membership would quietly drop them out of the member
+ * list and the expiring/expired views while their access is still live. The
+ * membership must be ended or deleted first.
+ */
+export async function deletePersonAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireStaff();
+  if (!user) return errorState("Your session expired. Please sign in again.");
+
+  const personId = String(formData.get("personId") ?? "");
+  if (!personId) return errorState("This customer no longer exists.");
+
+  try {
+    await connectToDatabase();
+
+    const blocking = await getBlockingMemberships(personId);
+    if (blocking.length > 0) {
+      return errorState(
+        blocking.length === 1
+          ? `${blocking[0].planName} is still running. End or delete it first, then delete the customer.`
+          : `${blocking.length} memberships are still running. End or delete them first, then delete the customer.`,
+      );
+    }
+
+    const result = await Person.updateOne(
+      { _id: personId, archivedAt: null },
+      { $set: { archivedAt: new Date() } },
+    );
+    if (result.matchedCount === 0) {
+      return errorState("This customer no longer exists.");
+    }
+  } catch {
+    return errorState("Could not delete this customer. Please try again.");
+  }
+
+  revalidatePath("/people");
+  revalidatePath("/members");
+  revalidatePath("/dashboard");
+  redirect("/people");
 }

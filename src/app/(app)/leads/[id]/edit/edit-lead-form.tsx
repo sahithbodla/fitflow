@@ -12,6 +12,7 @@ import {
 } from "@/components/leads/lead-form-fields";
 import { updateLeadAction } from "@/lib/actions/leads";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
 
 export function EditLeadForm({
@@ -23,21 +24,22 @@ export function EditLeadForm({
 }) {
   const action = updateLeadAction.bind(null, leadId);
   const [state, formAction] = useActionState(action, idleFormState);
+  const { errors, handleInput, alertState } = useFormErrors(state);
 
   useEffect(() => {
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
-      <FormAlert state={state} />
+    <form action={formAction} onInput={handleInput} className="space-y-5" noValidate>
+      <FormAlert state={alertState} />
 
       {/* Status has a dedicated control on the detail screen, so it is not
           duplicated in this form. */}
       <LeadFormFields
         key={state.values ? JSON.stringify(state.values) : "initial"}
         defaults={withSubmittedValues(defaults, state)}
-        errors={state.fieldErrors ?? {}}
+        errors={errors}
         showStatus={false}
       />
 

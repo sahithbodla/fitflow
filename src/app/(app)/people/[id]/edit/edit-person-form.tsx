@@ -16,9 +16,16 @@ import {
 import { Field } from "@/components/form/field";
 import { FormAlert } from "@/components/form/form-alert";
 import { SubmitButton } from "@/components/form/submit-button";
-import { updatePersonAction } from "@/lib/actions/conversion";
+import { ConfirmSubmit } from "@/components/form/confirm-submit";
+import {
+  createPersonAction,
+  updatePersonAction,
+} from "@/lib/actions/conversion";
 import { idleFormState } from "@/lib/actions/types";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
+import { useFormErrors } from "@/components/form/use-form-errors";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { TriangleAlert } from "lucide-react";
 
 export type PersonFormDefaults = {
   name: string;
@@ -29,31 +36,67 @@ export type PersonFormDefaults = {
   notes: string;
 };
 
+/**
+ * One form for creating and editing a customer.
+ *
+ * Passing `personId: null` creates; anything else updates. Creating warns when
+ * the phone or email already belongs to someone, so identity is not silently
+ * duplicated, with an explicit override.
+ */
 export function EditPersonForm({
   personId,
   defaults,
 }: {
-  personId: string;
+  personId: string | null;
   defaults: PersonFormDefaults;
 }) {
-  const action = updatePersonAction.bind(null, personId);
+  const action = personId
+    ? updatePersonAction.bind(null, personId)
+    : createPersonAction;
   const [state, formAction] = useActionState(action, idleFormState);
 
   useEffect(() => {
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const values = withSubmittedValues(defaults, state);
+  const duplicateId = state.fieldErrors?.__duplicate;
 
   return (
     <form
       key={state.values ? JSON.stringify(state.values) : "initial"}
       action={formAction}
+      onInput={handleInput}
       className="space-y-5"
       noValidate
     >
-      <FormAlert state={state} />
+      {duplicateId ? (
+        <Alert>
+          <TriangleAlert className="size-4" />
+          <AlertTitle>This might be a duplicate</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{state.message}</p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/people/${duplicateId}`}>Open existing</Link>
+              </Button>
+              <Button
+                type="submit"
+                name="allowDuplicate"
+                value="yes"
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground"
+              >
+                Add as a separate customer
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <FormAlert state={alertState} />
+      )}
 
       <Card>
         <CardHeader>
@@ -166,9 +209,21 @@ export function EditPersonForm({
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
-        <SubmitButton className="w-full sm:w-auto">Save changes</SubmitButton>
+        {personId ? (
+          <SubmitButton className="w-full sm:w-auto">Save changes</SubmitButton>
+        ) : (
+          <ConfirmSubmit
+            title="Add this customer?"
+            description="Creates a customer record. You can add memberships and coaching for them afterwards."
+            confirmLabel="Add customer"
+            pendingLabel="Saving…"
+            className="w-full sm:w-auto"
+          >
+            Add customer
+          </ConfirmSubmit>
+        )}
         <Button asChild variant="outline" className="w-full sm:w-auto">
-          <Link href={`/people/${personId}`}>Cancel</Link>
+          <Link href={personId ? `/people/${personId}` : "/people"}>Cancel</Link>
         </Button>
       </div>
     </form>

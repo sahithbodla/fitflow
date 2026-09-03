@@ -18,6 +18,7 @@ import { FormAlert } from "@/components/form/form-alert";
 import { SubmitButton } from "@/components/form/submit-button";
 import { cn } from "@/lib/utils";
 import { idleFormState, type FormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
 import {
   COACHING_STATUSES,
@@ -57,7 +58,7 @@ export function CoachingForm({
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const values = withSubmittedValues(
     {
       startDate: defaults.startDate,
@@ -72,13 +73,14 @@ export function CoachingForm({
     <form
       key={state.values ? JSON.stringify(state.values) : "initial"}
       action={formAction}
+      onInput={handleInput}
       className="space-y-5"
       noValidate
     >
       <input type="hidden" name="personId" value={personId} />
       <input type="hidden" name="status" value={status} />
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <Card>
         <CardHeader>

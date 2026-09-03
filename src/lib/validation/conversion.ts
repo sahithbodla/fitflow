@@ -45,6 +45,9 @@ export const updatePersonSchema = z.object({
   notes: z.string().trim().max(2000, "Please keep this shorter").default(""),
 });
 
+/** Creating a customer directly, without going through a lead. */
+export const createPersonSchema = updatePersonSchema;
+
 export const peopleFilterSchema = z.object({
   q: z.string().trim().max(120).optional(),
   type: z.enum(CONVERSION_TYPES).optional(),

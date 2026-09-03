@@ -11,7 +11,7 @@ import { Person } from "@/models/Person";
 import { getBrandSettings } from "@/lib/settings";
 import { zonedDayStart } from "@/lib/dates";
 import {
-  cancelMembershipSchema,
+  endMembershipSchema,
   membershipPlanSchema,
   membershipSchema,
   paymentSchema,
@@ -349,31 +349,39 @@ export async function updateMembershipAction(
   return successState("Membership updated.");
 }
 
-export async function cancelMembershipAction(
+/**
+ * Ends a membership early.
+ *
+ * `mode` records who ended it — the member cancelled, or the business
+ * terminated them over a disciplinary issue — because that distinction matters
+ * when the same person comes back. Dates are left exactly as purchased; ending
+ * records a decision, it does not rewrite history.
+ */
+export async function endMembershipAction(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
   const user = await requireStaff();
   if (!user) return errorState("Your session expired. Please sign in again.");
 
-  const parsed = cancelMembershipSchema.safeParse({
+  const parsed = endMembershipSchema.safeParse({
     membershipId: formData.get("membershipId"),
+    mode: formData.get("mode"),
     reason: formData.get("reason") ?? "",
   });
 
-  if (!parsed.success) return errorState("Could not cancel this membership.");
+  if (!parsed.success) return errorState("Could not end this membership.");
 
   try {
     await connectToDatabase();
-    // Dates are left untouched — cancelling records a decision, it does not
-    // rewrite what was purchased.
     const result = await Membership.updateOne(
       { _id: parsed.data.membershipId, archivedAt: null },
       {
         $set: {
-          status: "cancelled",
+          status: parsed.data.mode,
           cancelledAt: new Date(),
           cancelledReason: parsed.data.reason,
+          endedBy: user.name,
         },
       },
     );
@@ -381,13 +389,51 @@ export async function cancelMembershipAction(
       return errorState("This membership no longer exists.");
     }
   } catch {
-    return errorState("Could not cancel this membership. Please try again.");
+    return errorState("Could not end this membership. Please try again.");
   }
 
   revalidatePath(`/memberships/${parsed.data.membershipId}`);
   revalidatePath("/members");
   revalidatePath("/dashboard");
-  return successState("Membership cancelled.");
+  return successState(
+    parsed.data.mode === "terminated"
+      ? "Membership terminated."
+      : "Membership cancelled.",
+  );
+}
+
+/**
+ * Soft-deletes a membership. Historical business data is never hard-deleted —
+ * the row is retained and excluded from every query.
+ */
+export async function deleteMembershipAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireStaff();
+  if (!user) return errorState("Your session expired. Please sign in again.");
+
+  const membershipId = String(formData.get("membershipId") ?? "");
+  const personId = String(formData.get("personId") ?? "");
+  if (!membershipId) return errorState("This membership no longer exists.");
+
+  try {
+    await connectToDatabase();
+    const result = await Membership.updateOne(
+      { _id: membershipId, archivedAt: null },
+      { $set: { archivedAt: new Date() } },
+    );
+    if (result.matchedCount === 0) {
+      return errorState("This membership no longer exists.");
+    }
+  } catch {
+    return errorState("Could not delete this membership. Please try again.");
+  }
+
+  revalidatePath("/members");
+  revalidatePath("/dashboard");
+  if (personId) revalidatePath(`/people/${personId}`);
+  redirect(personId ? `/people/${personId}` : "/members");
 }
 
 // ---------------------------------------------------------------------------
@@ -457,10 +503,117 @@ export async function recordPaymentAction(
   }
 
   revalidatePath("/payments");
+  revalidatePath(`/payments/${parsed.data.personId}`);
   revalidatePath("/dashboard");
   revalidatePath(`/people/${parsed.data.personId}`);
   if (parsed.data.membershipId) {
     revalidatePath(`/memberships/${parsed.data.membershipId}`);
   }
   return successState("Payment recorded.");
+}
+
+export async function updatePaymentAction(
+  paymentId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireStaff();
+  if (!user) return errorState("Your session expired. Please sign in again.");
+
+  const parsed = paymentSchema.safeParse({
+    personId: formData.get("personId"),
+    membershipId: formData.get("membershipId") ?? "",
+    amount: formData.get("amount"),
+    paymentDate: formData.get("paymentDate"),
+    method: formData.get("method"),
+    status: formData.get("status") ?? "paid",
+    notes: formData.get("notes") ?? "",
+  });
+
+  if (!parsed.success) {
+    return errorState(
+      "Please fix the highlighted fields.",
+      fieldErrorsFromZod(parsed.error),
+      formValues(formData, PAYMENT_FIELDS),
+    );
+  }
+
+  const paymentDate = await parseBusinessDate(parsed.data.paymentDate);
+  if (!paymentDate) {
+    return errorState("Please check the date.", {
+      paymentDate: "Enter a valid date",
+    });
+  }
+
+  try {
+    await connectToDatabase();
+    const result = await PaymentRecord.updateOne(
+      { _id: paymentId, archivedAt: null },
+      {
+        $set: {
+          membership: parsed.data.membershipId || null,
+          amount: Number(parsed.data.amount),
+          paymentDate,
+          method: parsed.data.method,
+          status: parsed.data.status,
+          notes: parsed.data.notes,
+        },
+      },
+    );
+    if (result.matchedCount === 0) {
+      return errorState("This payment no longer exists.");
+    }
+  } catch (error) {
+    if (isRedirectError(error)) throw error;
+    return errorState(
+      "Could not save this payment. Please try again.",
+      undefined,
+      formValues(formData, PAYMENT_FIELDS),
+    );
+  }
+
+  revalidatePath("/payments");
+  revalidatePath(`/payments/${parsed.data.personId}`);
+  revalidatePath(`/people/${parsed.data.personId}`);
+  revalidatePath("/dashboard");
+  if (parsed.data.membershipId) {
+    revalidatePath(`/memberships/${parsed.data.membershipId}`);
+  }
+  redirect(`/payments/${parsed.data.personId}`);
+}
+
+/** Soft-deletes a payment; financial history is never hard-deleted. */
+export async function deletePaymentAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const user = await requireStaff();
+  if (!user) return errorState("Your session expired. Please sign in again.");
+
+  const paymentId = String(formData.get("paymentId") ?? "");
+  const personId = String(formData.get("personId") ?? "");
+  const membershipId = String(formData.get("membershipId") ?? "");
+  if (!paymentId) return errorState("This payment no longer exists.");
+
+  try {
+    await connectToDatabase();
+    const result = await PaymentRecord.updateOne(
+      { _id: paymentId, archivedAt: null },
+      { $set: { archivedAt: new Date() } },
+    );
+    if (result.matchedCount === 0) {
+      return errorState("This payment no longer exists.");
+    }
+  } catch {
+    return errorState("Could not delete this payment. Please try again.");
+  }
+
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  if (personId) {
+    revalidatePath(`/payments/${personId}`);
+    revalidatePath(`/people/${personId}`);
+  }
+  if (membershipId) revalidatePath(`/memberships/${membershipId}`);
+  return successState("Payment deleted.");
 }

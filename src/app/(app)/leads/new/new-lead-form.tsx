@@ -5,23 +5,24 @@ import { useActionState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { TriangleAlert } from "lucide-react";
-import { SubmitButton } from "@/components/form/submit-button";
+import { ConfirmSubmit } from "@/components/form/confirm-submit";
 import {
   EMPTY_LEAD_DEFAULTS,
   LeadFormFields,
 } from "@/components/leads/lead-form-fields";
 import { createLeadAction } from "@/lib/actions/leads";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
 
 export function NewLeadForm() {
   const [state, formAction] = useActionState(createLeadAction, idleFormState);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const duplicateId = errors.__duplicate;
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form action={formAction} onInput={handleInput} className="space-y-5" noValidate>
 
       {duplicateId ? (
         <Alert>
@@ -51,9 +52,9 @@ export function NewLeadForm() {
             </div>
           </AlertDescription>
         </Alert>
-      ) : state.status === "error" && state.message ? (
+      ) : alertState.status === "error" && alertState.message ? (
         <Alert variant="destructive" role="alert">
-          <AlertDescription>{state.message}</AlertDescription>
+          <AlertDescription>{alertState.message}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -64,9 +65,15 @@ export function NewLeadForm() {
       />
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
-        <SubmitButton pendingLabel="Saving…" className="w-full sm:w-auto">
+        <ConfirmSubmit
+          title="Add this lead?"
+          description="Creates the lead so you can follow up and convert them later."
+          confirmLabel="Add lead"
+          pendingLabel="Saving…"
+          className="w-full sm:w-auto"
+        >
           Save lead
-        </SubmitButton>
+        </ConfirmSubmit>
         <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link href="/leads">Cancel</Link>
         </Button>

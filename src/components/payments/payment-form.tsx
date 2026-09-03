@@ -6,10 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/form/field";
 import { FormAlert } from "@/components/form/form-alert";
-import { SubmitButton } from "@/components/form/submit-button";
 import { cn } from "@/lib/utils";
-import { recordPaymentAction } from "@/lib/actions/memberships";
+import {
+  recordPaymentAction,
+  updatePaymentAction,
+} from "@/lib/actions/memberships";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
+import { ConfirmSubmit } from "@/components/form/confirm-submit";
+import { Field as FormField } from "@/components/form/field";
+import { cn as classNames } from "@/lib/utils";
 import {
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABELS,
@@ -21,42 +27,75 @@ import {
 
 /** Manual payment entry. There is no gateway — this records money already taken. */
 export function PaymentForm({
+  paymentId,
   personId,
   membershipId,
+  membershipOptions,
   currency,
   today,
   defaultAmount,
+  defaults,
+  submitLabel = "Record payment",
 }: {
+  /** Null creates a payment; an id updates that one. */
+  paymentId?: string | null;
   personId: string;
   membershipId?: string;
+  /** Offered when the payment is not already tied to one membership. */
+  membershipOptions?: { id: string; label: string }[];
   currency: string;
   today: string;
   defaultAmount?: string;
+  defaults?: {
+    amount: string;
+    paymentDate: string;
+    method: PaymentMethod;
+    status: PaymentStatus;
+    notes: string;
+    membershipId: string;
+  };
+  submitLabel?: string;
 }) {
-  const [state, formAction] = useActionState(recordPaymentAction, idleFormState);
-  const [method, setMethod] = useState<PaymentMethod>("cash");
-  const [status, setStatus] = useState<PaymentStatus>("paid");
+  const action = paymentId
+    ? updatePaymentAction.bind(null, paymentId)
+    : recordPaymentAction;
+  const [state, formAction] = useActionState(action, idleFormState);
+  const [method, setMethod] = useState<PaymentMethod>(
+    defaults?.method ?? "cash",
+  );
+  const [status, setStatus] = useState<PaymentStatus>(
+    defaults?.status ?? "paid",
+  );
+  const [linkedMembership, setLinkedMembership] = useState(
+    defaults?.membershipId ?? membershipId ?? "",
+  );
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.status === "success") {
+    // Only the inline "record another" form resets; the edit page navigates
+    // away on success.
+    if (state.status === "success" && !paymentId) {
       formRef.current?.reset();
       if (state.message) toast.success(state.message);
     }
-  }, [state]);
+  }, [state, paymentId]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
 
   return (
-    <form action={formAction} ref={formRef} className="space-y-4" noValidate>
+    <form
+      action={formAction}
+      ref={formRef}
+      onInput={handleInput}
+      className="space-y-4"
+      noValidate
+    >
       <input type="hidden" name="personId" value={personId} />
-      {membershipId ? (
-        <input type="hidden" name="membershipId" value={membershipId} />
-      ) : null}
+      <input type="hidden" name="membershipId" value={linkedMembership} />
       <input type="hidden" name="method" value={method} />
       <input type="hidden" name="status" value={status} />
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
@@ -73,7 +112,7 @@ export function PaymentForm({
             min={0}
             step="0.01"
             required
-            defaultValue={defaultAmount ?? ""}
+            defaultValue={defaults?.amount ?? defaultAmount ?? ""}
             aria-invalid={Boolean(errors.amount)}
             aria-describedby={errors.amount ? "amount-error" : undefined}
           />
@@ -89,7 +128,7 @@ export function PaymentForm({
             id="paymentDate"
             name="paymentDate"
             type="date"
-            defaultValue={today}
+            defaultValue={defaults?.paymentDate ?? today}
             required
             aria-invalid={Boolean(errors.paymentDate)}
             aria-describedby={
@@ -143,19 +182,70 @@ export function PaymentForm({
         </div>
       </fieldset>
 
+      {membershipOptions && membershipOptions.length > 0 ? (
+        <FormField
+          id="membership-link"
+          label="Against which membership?"
+          hint="Optional — leave unlinked for anything else."
+        >
+          <div className="flex flex-wrap gap-2 pt-1">
+            <button
+              type="button"
+              aria-pressed={linkedMembership === ""}
+              onClick={() => setLinkedMembership("")}
+              className={classNames(
+                "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                linkedMembership === ""
+                  ? "border-brand bg-brand text-brand-foreground"
+                  : "hover:bg-accent",
+              )}
+            >
+              Not linked
+            </button>
+            {membershipOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={linkedMembership === option.id}
+                onClick={() => setLinkedMembership(option.id)}
+                className={classNames(
+                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  linkedMembership === option.id
+                    ? "border-brand bg-brand text-brand-foreground"
+                    : "hover:bg-accent",
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </FormField>
+      ) : null}
+
       <Field id="payment-notes" label="Notes" error={errors.notes}>
         <Textarea
           id="payment-notes"
           name="notes"
           rows={2}
           maxLength={2000}
+          defaultValue={defaults?.notes ?? ""}
           placeholder="Reference number, part payment…"
         />
       </Field>
 
-      <SubmitButton pendingLabel="Recording…" className="w-full sm:w-auto">
-        Record payment
-      </SubmitButton>
+      <ConfirmSubmit
+        title={paymentId ? "Save this payment?" : "Record this payment?"}
+        description={
+          paymentId
+            ? "Updates the recorded amount, date, method and status."
+            : "Adds a payment record against this customer. You can edit or delete it afterwards."
+        }
+        confirmLabel={paymentId ? "Save payment" : "Record payment"}
+        pendingLabel="Saving…"
+        className="w-full sm:w-auto"
+      >
+        {submitLabel}
+      </ConfirmSubmit>
     </form>
   );
 }

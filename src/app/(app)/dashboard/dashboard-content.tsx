@@ -59,12 +59,15 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
     },
   ];
 
+  // Every tile links to the list it counts, filtered to match — so the number
+  // and the screen it opens always agree.
   const overview = [
     {
       label: "New leads",
       value: metrics.newLeads,
       icon: ClipboardList,
       tone: "brand" as const,
+      href: "/leads?status=new",
     },
     {
       label: "Gym memberships",
@@ -72,6 +75,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: Users,
       tone: "default" as const,
       hint: "Active",
+      href: "/members?state=active&category=gym",
     },
     {
       label: "PT clients",
@@ -79,6 +83,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: Dumbbell,
       tone: "default" as const,
       hint: "Active",
+      href: "/members?state=active&category=personal_training",
     },
     {
       label: "Coaching clients",
@@ -86,6 +91,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: Sparkles,
       tone: "default" as const,
       hint: "Active",
+      href: "/coaching?status=active",
     },
     {
       label: "Check-ins",
@@ -93,6 +99,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: CalendarCheck,
       tone: "default" as const,
       hint: "Last 7 days",
+      href: "/coaching",
     },
     {
       label: "Payments",
@@ -100,6 +107,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       icon: CreditCard,
       tone: "default" as const,
       hint: "This month",
+      href: "/payments",
     },
   ];
 
@@ -172,7 +180,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
               <Link
                 key={item.label}
                 href={item.href}
-                className="rounded-xl transition-opacity hover:opacity-80"
+                className="focus-visible:ring-ring rounded-xl transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
               >
                 <StatCard
                   label={item.label}
@@ -194,14 +202,19 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
         </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {overview.map((item) => (
-            <StatCard
+            <Link
               key={item.label}
-              label={item.label}
-              value={item.value}
-              hint={item.hint}
-              icon={item.icon}
-              tone={item.tone}
-            />
+              href={item.href}
+              className="focus-visible:ring-ring rounded-xl transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <StatCard
+                label={item.label}
+                value={item.value}
+                hint={item.hint}
+                icon={item.icon}
+                tone={item.tone}
+              />
+            </Link>
           ))}
         </div>
       </section>

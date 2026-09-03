@@ -19,6 +19,7 @@ import { SubmitButton } from "@/components/form/submit-button";
 import { cn } from "@/lib/utils";
 import { saveDietPlanAction } from "@/lib/actions/diet";
 import { idleFormState } from "@/lib/actions/types";
+import { useFormErrors } from "@/components/form/use-form-errors";
 import { withSubmittedValues } from "@/lib/actions/merge-values";
 import {
   DIET_GOALS,
@@ -60,7 +61,7 @@ export function DietPlanForm({
     if (state.status === "success" && state.message) toast.success(state.message);
   }, [state]);
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const values = withSubmittedValues(
     {
       title: defaults.title,
@@ -78,13 +79,14 @@ export function DietPlanForm({
     <form
       key={state.values ? JSON.stringify(state.values) : "initial"}
       action={formAction}
+      onInput={handleInput}
       className="space-y-5"
       noValidate
     >
       <input type="hidden" name="coachingClientId" value={coachingClientId} />
       <input type="hidden" name="goal" value={goal} />
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <Card>
         <CardHeader>

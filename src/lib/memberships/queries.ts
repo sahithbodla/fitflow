@@ -205,6 +205,8 @@ function stateFilter(
       };
     case "cancelled":
       return { status: "cancelled" };
+    case "terminated":
+      return { status: "terminated" };
     default:
       return {};
   }
@@ -272,15 +274,29 @@ export async function getMembershipStateCounts(
   await connectToDatabase();
 
   const base = { archivedAt: null };
-  const [all, active, expiring, expired, cancelled] = await Promise.all([
-    Membership.countDocuments(base),
-    Membership.countDocuments({ ...base, ...stateFilter("active", timeZone) }),
-    Membership.countDocuments({ ...base, ...stateFilter("expiring", timeZone) }),
-    Membership.countDocuments({ ...base, ...stateFilter("expired", timeZone) }),
-    Membership.countDocuments({ ...base, ...stateFilter("cancelled", timeZone) }),
-  ]);
+  const [all, active, expiring, expired, cancelled, terminated] =
+    await Promise.all([
+      Membership.countDocuments(base),
+      Membership.countDocuments({ ...base, ...stateFilter("active", timeZone) }),
+      Membership.countDocuments({
+        ...base,
+        ...stateFilter("expiring", timeZone),
+      }),
+      Membership.countDocuments({
+        ...base,
+        ...stateFilter("expired", timeZone),
+      }),
+      Membership.countDocuments({
+        ...base,
+        ...stateFilter("cancelled", timeZone),
+      }),
+      Membership.countDocuments({
+        ...base,
+        ...stateFilter("terminated", timeZone),
+      }),
+    ]);
 
-  return { all, active, expiring, expired, cancelled };
+  return { all, active, expiring, expired, cancelled, terminated };
 }
 
 /** Every membership for one person, newest first, for the profile timeline. */
@@ -489,6 +505,43 @@ export async function listPersonPayments(
       membership?: { _id: unknown; planName: string } | null;
     })[]
   ).map(toPaymentListItem);
+}
+
+export async function getPayment(id: string): Promise<
+  (PaymentListItem & { personName: string }) | null
+> {
+  await connectToDatabase();
+  if (!/^[a-f\d]{24}$/i.test(id)) return null;
+
+  const doc = await PaymentRecord.findOne({ _id: id, archivedAt: null })
+    .populate("person", "name phone")
+    .populate("membership", "planName")
+    .lean();
+  if (!doc) return null;
+
+  return toPaymentListItem(
+    doc as unknown as PaymentRecordDoc & {
+      person: PopulatedPerson;
+      membership?: { _id: unknown; planName: string } | null;
+    },
+  );
+}
+
+/** Memberships a payment can be attached to, for the payment form. */
+export async function listPersonMembershipOptions(
+  personId: string,
+): Promise<{ id: string; label: string }[]> {
+  await connectToDatabase();
+
+  const docs = await Membership.find({ person: personId, archivedAt: null })
+    .sort({ startDate: -1 })
+    .select("planName startDate")
+    .lean<MembershipDoc[]>();
+
+  return docs.map((doc) => ({
+    id: String(doc._id),
+    label: `${doc.planName} · from ${doc.startDate.toISOString().slice(0, 10)}`,
+  }));
 }
 
 export async function listMembershipPayments(

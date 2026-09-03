@@ -1,17 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Receipt } from "lucide-react";
+import { Plus, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
-import { PaymentStatusBadge } from "@/components/memberships/membership-badges";
+import { PaymentRow } from "@/components/payments/payment-row";
 import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { listPayments } from "@/lib/memberships/queries";
 import { paymentFilterSchema } from "@/lib/validation/membership";
-import { formatCurrency, formatDate } from "@/lib/dates";
-import { PAYMENT_METHOD_LABELS } from "@/lib/memberships/constants";
+import { formatCurrency } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -42,6 +41,17 @@ export default async function PaymentsPage({
       <PageHeader
         title="Payments"
         description="Manually recorded — there is no payment gateway in this MVP."
+        actions={
+          <Button
+            asChild
+            className="bg-brand text-brand-foreground hover:bg-brand-strong"
+          >
+            <Link href="/payments/new">
+              <Plus className="size-4" />
+              Add payment
+            </Link>
+          </Button>
+        }
       />
 
       {payments.length === 0 ? (
@@ -50,9 +60,20 @@ export default async function PaymentsPage({
           title="No payments recorded"
           description="Record payments from a membership, so each one is tied to what it paid for."
           action={
-            <Button asChild variant="outline">
-              <Link href="/members">Go to memberships</Link>
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                asChild
+                className="bg-brand text-brand-foreground hover:bg-brand-strong"
+              >
+                <Link href="/payments/new">
+                  <Plus className="size-4" />
+                  Add payment
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/members">Go to memberships</Link>
+              </Button>
+            </div>
           }
         />
       ) : (
@@ -74,46 +95,11 @@ export default async function PaymentsPage({
 
           <div className="space-y-2.5">
             {payments.map((payment) => (
-              <div
+              <PaymentRow
                 key={payment.id}
-                className="bg-card flex items-start justify-between gap-3 rounded-xl border px-4 py-3.5"
-              >
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/people/${payment.personId}`}
-                      className="hover:text-brand font-medium transition-colors"
-                    >
-                      {payment.personName}
-                    </Link>
-                    <PaymentStatusBadge status={payment.status} />
-                  </div>
-
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {formatDate(payment.paymentDate, brand.timezone)} ·{" "}
-                    {PAYMENT_METHOD_LABELS[payment.method]}
-                  </p>
-
-                  {payment.membershipId && payment.membershipLabel ? (
-                    <Link
-                      href={`/memberships/${payment.membershipId}`}
-                      className="text-brand mt-0.5 inline-block text-xs hover:underline"
-                    >
-                      {payment.membershipLabel}
-                    </Link>
-                  ) : null}
-
-                  {payment.notes ? (
-                    <p className="text-muted-foreground/80 mt-1 text-xs text-pretty">
-                      {payment.notes}
-                    </p>
-                  ) : null}
-                </div>
-
-                <p className="shrink-0 font-semibold tabular-nums">
-                  {formatCurrency(payment.amount, payment.currency)}
-                </p>
-              </div>
+                payment={payment}
+                timeZone={brand.timezone}
+              />
             ))}
           </div>
 

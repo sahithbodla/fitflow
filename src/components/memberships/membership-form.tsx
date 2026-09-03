@@ -26,6 +26,15 @@ import {
   type MembershipCategory,
 } from "@/lib/memberships/constants";
 import type { PlanListItem } from "@/lib/memberships/queries";
+import {
+  CUSTOM_DURATION,
+  DURATION_PRESETS,
+  durationForRange,
+  expiryFromDuration,
+  type DurationValue,
+} from "@/lib/memberships/dates";
+import { useFormErrors } from "@/components/form/use-form-errors";
+import { ConfirmSubmit } from "@/components/form/confirm-submit";
 
 export type MembershipFormDefaults = {
   planId: string;
@@ -38,15 +47,6 @@ export type MembershipFormDefaults = {
   notes: string;
 };
 
-/** Adds days to a `yyyy-mm-dd` string without going near timezones. */
-function addDays(dateString: string, days: number): string {
-  const [year, month, day] = dateString.split("-").map(Number);
-  if (!year || !month || !day) return dateString;
-  const date = new Date(Date.UTC(year, month - 1, day));
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 export function MembershipForm({
   action,
   personId,
@@ -57,6 +57,7 @@ export function MembershipForm({
   renewedFrom,
   submitLabel,
   cancelHref,
+  confirm,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
   personId: string;
@@ -67,6 +68,8 @@ export function MembershipForm({
   renewedFrom?: string;
   submitLabel: string;
   cancelHref: string;
+  /** When set, the submit asks for confirmation first. */
+  confirm?: { title: string; description: string; confirmLabel: string };
 }) {
   const [state, formAction] = useActionState(action, idleFormState);
 
@@ -78,8 +81,11 @@ export function MembershipForm({
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [expiryDate, setExpiryDate] = useState(defaults.expiryDate);
   const [price, setPrice] = useState(defaults.price);
+  const [duration, setDuration] = useState<DurationValue>(() =>
+    durationForRange(defaults.startDate, defaults.expiryDate),
+  );
 
-  const errors = state.fieldErrors ?? {};
+  const { errors, handleInput, alertState } = useFormErrors(state);
   const values = withSubmittedValues(
     { purchaseDate: defaults.purchaseDate, notes: defaults.notes },
     state,
@@ -87,21 +93,54 @@ export function MembershipForm({
 
   const categoryPlans = plans.filter((plan) => plan.category === category);
 
+  const isCustom = duration === CUSTOM_DURATION;
+
+  const applyDuration = (next: DurationValue, from: string) => {
+    setDuration(next);
+    if (next === CUSTOM_DURATION) return;
+    const preset = DURATION_PRESETS.find((option) => option.value === next);
+    if (preset && from) setExpiryDate(expiryFromDuration(from, preset.months));
+  };
+
+  const changeStartDate = (next: string) => {
+    setStartDate(next);
+    // A preset length is relative to the start date, so it follows it.
+    if (!isCustom) applyDuration(duration, next);
+  };
+
   /**
-   * Selecting a plan *suggests* its duration and price. Both remain fully
-   * editable — the business explicitly needs per-member dates and pricing.
+   * Selecting a plan *suggests* a length and price. Both remain editable — the
+   * business explicitly needs per-member dates and pricing.
    */
   const applyPlan = (plan: PlanListItem) => {
     setPlanId(plan.id);
     setPlanName(plan.name);
     if (plan.defaultPrice !== null) setPrice(String(plan.defaultPrice));
     if (plan.defaultDurationDays && startDate) {
-      setExpiryDate(addDays(startDate, plan.defaultDurationDays));
+      // Snap a plan's day count to the nearest whole-month preset where one
+      // matches, so the picker reflects what was actually applied.
+      const months = Math.round(plan.defaultDurationDays / 30);
+      const preset = DURATION_PRESETS.find(
+        (option) => option.months === months,
+      );
+      if (preset) {
+        applyDuration(preset.value, startDate);
+      } else {
+        setDuration(CUSTOM_DURATION);
+        const date = new Date(`${startDate}T00:00:00Z`);
+        date.setUTCDate(date.getUTCDate() + plan.defaultDurationDays);
+        setExpiryDate(date.toISOString().slice(0, 10));
+      }
     }
   };
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
+    <form
+      action={formAction}
+      onInput={handleInput}
+      className="space-y-5"
+      noValidate
+    >
       <input type="hidden" name="personId" value={personId} />
       <input type="hidden" name="planId" value={planId} />
       <input type="hidden" name="category" value={category} />
@@ -110,7 +149,7 @@ export function MembershipForm({
         <input type="hidden" name="renewedFrom" value={renewedFrom} />
       ) : null}
 
-      <FormAlert state={state} />
+      <FormAlert state={alertState} />
 
       <Card>
         <CardHeader>
@@ -224,11 +263,49 @@ export function MembershipForm({
         <CardHeader>
           <CardTitle className="text-base">Dates</CardTitle>
           <CardDescription>
-            Set each date independently. Expiry is never calculated from the
-            purchase date — a member can pay today and start next month.
+            Pick a length and the expiry follows the start date. Choose Custom
+            to set it by hand. Expiry is never derived from the purchase date —
+            a member can pay today and start next month.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="space-y-4">
+          <fieldset className="space-y-2">
+            <legend className="text-sm leading-none font-medium">Length</legend>
+            <input type="hidden" name="duration" value={duration} />
+            <div className="flex flex-wrap gap-2 pt-1">
+              {DURATION_PRESETS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={duration === option.value}
+                  onClick={() => applyDuration(option.value, startDate)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                    duration === option.value
+                      ? "border-brand bg-brand text-brand-foreground"
+                      : "hover:bg-accent",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-pressed={isCustom}
+                onClick={() => setDuration(CUSTOM_DURATION)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                  isCustom
+                    ? "border-brand bg-brand text-brand-foreground"
+                    : "hover:bg-accent",
+                )}
+              >
+                Custom
+              </button>
+            </div>
+          </fieldset>
+
+          <div className="grid gap-4 sm:grid-cols-3">
           <Field
             id="purchaseDate"
             label="Purchase date"
@@ -259,7 +336,7 @@ export function MembershipForm({
               name="startDate"
               type="date"
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              onChange={(event) => changeStartDate(event.target.value)}
               required
               aria-invalid={Boolean(errors.startDate)}
               aria-describedby={
@@ -271,6 +348,7 @@ export function MembershipForm({
           <Field
             id="expiryDate"
             label="Expiry date"
+            hint={isCustom ? undefined : "Set by the length you chose."}
             error={errors.expiryDate}
             required
           >
@@ -281,14 +359,20 @@ export function MembershipForm({
               value={expiryDate}
               onChange={(event) => setExpiryDate(event.target.value)}
               required
+              readOnly={!isCustom}
+              // Read-only rather than disabled: a disabled input posts no
+              // value, and the expiry must always reach the server.
+              aria-readonly={!isCustom}
+              className={cn(!isCustom && "bg-muted text-muted-foreground")}
               aria-invalid={Boolean(errors.expiryDate)}
               aria-describedby={
-                errors.expiryDate ? "expiryDate-error" : undefined
+                errors.expiryDate ? "expiryDate-error" : "expiryDate-hint"
               }
             />
           </Field>
+          </div>
 
-          <p className="text-muted-foreground sm:col-span-3 text-xs">
+          <p className="text-muted-foreground text-xs">
             Access runs from the start date to the end of the expiry date,
             inclusive.
           </p>
@@ -332,7 +416,19 @@ export function MembershipForm({
       </Card>
 
       <div className="flex flex-col gap-2 sm:flex-row-reverse">
-        <SubmitButton className="w-full sm:w-auto">{submitLabel}</SubmitButton>
+        {confirm ? (
+          <ConfirmSubmit
+            title={confirm.title}
+            description={confirm.description}
+            confirmLabel={confirm.confirmLabel}
+            pendingLabel="Saving…"
+            className="w-full sm:w-auto"
+          >
+            {submitLabel}
+          </ConfirmSubmit>
+        ) : (
+          <SubmitButton className="w-full sm:w-auto">{submitLabel}</SubmitButton>
+        )}
         <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link href={cancelHref}>Cancel</Link>
         </Button>

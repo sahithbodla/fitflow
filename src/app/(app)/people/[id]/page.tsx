@@ -28,6 +28,8 @@ import { requireUser } from "@/lib/auth/guard";
 import { getBrandSettings } from "@/lib/settings";
 import { getPerson } from "@/lib/people/queries";
 import { getCoachingClientForPerson } from "@/lib/coaching/queries";
+import { getBlockingMemberships } from "@/lib/actions/conversion";
+import { DeletePerson } from "./delete-person";
 import {
   listPersonMemberships,
   listPersonPayments,
@@ -62,11 +64,13 @@ export default async function PersonDetailPage({
   const person = await getPerson(id);
   if (!person) notFound();
 
-  const [memberships, payments, coachingClient] = await Promise.all([
-    listPersonMemberships(person.id, brand.timezone),
-    listPersonPayments(person.id),
-    getCoachingClientForPerson(person.id),
-  ]);
+  const [memberships, payments, coachingClient, blockingMemberships] =
+    await Promise.all([
+      listPersonMemberships(person.id, brand.timezone),
+      listPersonPayments(person.id),
+      getCoachingClientForPerson(person.id),
+      getBlockingMemberships(person.id),
+    ]);
 
   const types = [...new Set(person.conversions.map((row) => row.type))];
 
@@ -225,10 +229,15 @@ export default async function PersonDetailPage({
           {/* Payment history */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Receipt className="text-muted-foreground size-4" />
-                Payments
-              </CardTitle>
+              <div className="flex items-start justify-between gap-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Receipt className="text-muted-foreground size-4" />
+                  Payments
+                </CardTitle>
+                <Button asChild size="sm" variant="outline" className="shrink-0">
+                  <Link href={`/payments/${person.id}`}>Manage</Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {payments.length === 0 ? (
@@ -443,6 +452,16 @@ export default async function PersonDetailPage({
               </CardContent>
             </Card>
           ) : null}
+
+          <Card>
+            <CardContent className="pt-6">
+              <DeletePerson
+                personId={person.id}
+                personName={person.name}
+                blocking={blockingMemberships}
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
