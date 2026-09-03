@@ -57,6 +57,15 @@ const membershipSchema = new Schema(
     notes: { type: String, trim: true, maxlength: 2000, default: "" },
     /** The membership this one renews, forming the history chain. */
     renewedFrom: { type: Types.ObjectId, ref: "Membership", default: null },
+    /**
+     * Set on the *old* period when a later one renews it (the inverse of
+     * `renewedFrom`). A membership can be individually "expired" by its own
+     * dates and still not need follow-up, because it was already renewed —
+     * this is what lets the expired/needs-attention views exclude it without
+     * touching `effectiveStatus()`, which stays purely date-based for the
+     * per-row badge shown in a person's history.
+     */
+    renewedBy: { type: Types.ObjectId, ref: "Membership", default: null },
     /** Set when a membership is cancelled or terminated early. */
     cancelledAt: { type: Date, default: null },
     cancelledReason: { type: String, trim: true, maxlength: 500, default: "" },

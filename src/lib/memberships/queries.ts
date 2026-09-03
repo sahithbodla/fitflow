@@ -202,6 +202,9 @@ function stateFilter(
       return {
         status: { $in: ["active", "expired"] },
         expiryDate: { $lt: todayStart },
+        // A period already renewed no longer needs chasing, even though its
+        // own dates are still in the past — see Membership.renewedBy.
+        renewedBy: null,
       };
     case "cancelled":
       return { status: "cancelled" };

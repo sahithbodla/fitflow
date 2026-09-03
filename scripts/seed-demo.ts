@@ -290,6 +290,15 @@ async function main() {
   /** Vikram's second year — the row that renews the original period. */
   const vikramRenewal = allMemberships.find((m) => Boolean(m.renewedFrom))!;
 
+  // Mirrors what createMembershipAction does on a real renewal: mark the old
+  // period as superseded so it doesn't show up as needing follow-up. Done as
+  // a follow-up update, not inline above, because vikramRenewal's _id doesn't
+  // exist until after that Membership.create() call resolves.
+  await Membership.updateOne(
+    { _id: vikramFirst._id },
+    { $set: { renewedBy: vikramRenewal._id } },
+  );
+
   // ------------------------------------------------------------- payments --
   await PaymentRecord.create(asDocs([
     { person: who("Priya Sharma")._id, membership: findMem("Priya Sharma", "6 Month Gym")._id, amount: 7500, currency: "INR", paymentDate: day(-45), method: "upi", status: "paid", notes: "Paid in full.", recordedBy: coach },

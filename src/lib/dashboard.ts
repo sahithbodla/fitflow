@@ -108,9 +108,12 @@ export const getDashboardMetrics = cache(
           archivedAt: null,
         }),
 
+        // A period already renewed no longer needs chasing, even though its
+        // own dates are still in the past — see Membership.renewedBy.
         count(COLLECTIONS.memberships, {
           status: { $in: ["active", "expired"] },
           expiryDate: { $lt: todayStart },
+          renewedBy: null,
           archivedAt: null,
         }),
 

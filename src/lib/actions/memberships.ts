@@ -261,6 +261,16 @@ export async function createMembershipAction(
     });
 
     membershipId = String(created._id);
+
+    // Mark the old period as superseded so it stops appearing in the
+    // "needs attention" / expired queue — it stays in history with its real
+    // dates and its own effective status, it just no longer needs chasing.
+    if (parsed.data.renewedFrom) {
+      await Membership.updateOne(
+        { _id: parsed.data.renewedFrom },
+        { $set: { renewedBy: created._id } },
+      );
+    }
   } catch {
     return errorState(
       "Could not save this membership. Please try again.",
