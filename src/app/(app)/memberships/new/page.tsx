@@ -48,7 +48,7 @@ export default async function NewMembershipPage({
 
         <PersonPicker
           people={people}
-          hrefFor={(id) => `/memberships/new?person=${id}`}
+          hrefBase="/memberships/new"
           description="Pick an existing customer, or add a new one — either way the membership attaches to a single customer record."
         />
       </div>

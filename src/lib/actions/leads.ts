@@ -30,6 +30,8 @@ import {
 } from "@/lib/actions/types";
 import { formatDate } from "@/lib/dates";
 import { rateLimit, pruneRateLimiter } from "@/lib/rate-limit";
+import { recordAudit, diffFields } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 /** Fields echoed back to a form when validation fails. */
 const PUBLIC_LEAD_FIELDS = [
@@ -259,7 +261,20 @@ export async function createLeadAction(
     });
 
     newId = String(created._id);
-  } catch {
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "LEAD_CREATED",
+      entityType: "lead",
+      entityId: newId,
+      metadata: {
+        name: parsed.data.name,
+        phone: parsed.data.phone,
+        source: parsed.data.source,
+      },
+    });
+  } catch (error) {
+    logger.error("createLeadAction failed", error);
     return errorState(
       "Could not save this lead. Please try again.",
       undefined,
@@ -306,6 +321,14 @@ export async function updateLeadAction(
     const lead = await Lead.findOne({ _id: leadId, archivedAt: null });
     if (!lead) return errorState("This lead no longer exists.");
 
+    const before = {
+      name: lead.name,
+      phone: lead.phone,
+      email: lead.email,
+      fitnessGoal: lead.fitnessGoal,
+      interestedIn: lead.interestedIn,
+    };
+
     const followUpDate = await parseBusinessDate(parsed.data.followUpDate);
 
     lead.set({
@@ -328,7 +351,29 @@ export async function updateLeadAction(
     });
 
     await lead.save();
-  } catch {
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "LEAD_UPDATED",
+      entityType: "lead",
+      entityId: leadId,
+      metadata: {
+        name: parsed.data.name,
+        ...diffFields(
+          before,
+          {
+            name: parsed.data.name,
+            phone: parsed.data.phone,
+            email: parsed.data.email,
+            fitnessGoal: parsed.data.fitnessGoal,
+            interestedIn: parsed.data.interestedIn,
+          },
+          ["name", "phone", "email", "fitnessGoal", "interestedIn"],
+        ),
+      },
+    });
+  } catch (error) {
+    logger.error("updateLeadAction failed", error, { leadId });
     return errorState(
       "Could not save your changes. Please try again.",
       undefined,
@@ -378,7 +423,22 @@ export async function updateLeadStatusAction(
     });
 
     await lead.save();
-  } catch {
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "LEAD_STATUS_CHANGED",
+      entityType: "lead",
+      entityId: parsed.data.leadId,
+      metadata: {
+        name: lead.name,
+        from: previous,
+        to: parsed.data.status,
+      },
+    });
+  } catch (error) {
+    logger.error("updateLeadStatusAction failed", error, {
+      leadId: parsed.data.leadId,
+    });
     return errorState("Could not change the status. Please try again.");
   }
 

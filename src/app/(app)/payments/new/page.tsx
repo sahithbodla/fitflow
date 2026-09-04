@@ -36,7 +36,7 @@ export default async function NewPaymentPage({
           Payments
         </Link>
         <PageHeader title="Add payment" />
-        <PersonPicker people={people} hrefFor={(id) => `/payments/new?person=${id}`} />
+        <PersonPicker people={people} hrefBase="/payments/new" />
       </div>
     );
   }

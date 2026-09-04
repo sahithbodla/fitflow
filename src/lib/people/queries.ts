@@ -58,6 +58,7 @@ export type PersonDetail = {
     id: string;
     status: CoachingStatus;
     startDate: string;
+    endDate: string | null;
     goal: string;
   } | null;
 };
@@ -210,6 +211,7 @@ export async function getPerson(id: string): Promise<PersonDetail | null> {
           id: String(coaching._id),
           status: coaching.status as CoachingStatus,
           startDate: coaching.startDate.toISOString(),
+          endDate: coaching.endDate ? coaching.endDate.toISOString() : null,
           goal: coaching.goal ?? "",
         }
       : null,

@@ -20,6 +20,8 @@ import {
   successState,
   type FormState,
 } from "@/lib/actions/types";
+import { recordAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const PLAN_FIELDS = [
   "title",
@@ -130,6 +132,14 @@ export async function saveDietPlanAction(
       if (result.matchedCount === 0) {
         return errorState("This diet plan no longer exists.");
       }
+
+      await recordAudit({
+        actorUserId: user.id,
+        action: "DIET_PLAN_UPDATED",
+        entityType: "dietPlan",
+        entityId: planId,
+        metadata: { planName: parsed.data.title },
+      });
     } else {
       // A new plan supersedes the previous one, so "the current plan" is never
       // ambiguous. Older plans stay as history, just marked past.
@@ -145,9 +155,18 @@ export async function saveDietPlanAction(
         active: true,
       });
       id = String(created._id);
+
+      await recordAudit({
+        actorUserId: user.id,
+        action: "DIET_PLAN_CREATED",
+        entityType: "dietPlan",
+        entityId: id,
+        metadata: { planName: parsed.data.title },
+      });
     }
   } catch (error) {
     if (isRedirectError(error)) throw error;
+    logger.error("saveDietPlanAction failed", error, { clientId, planId });
     return errorState(
       "Could not save this plan. Please try again.",
       undefined,

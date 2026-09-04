@@ -53,6 +53,8 @@ export type MembershipListItem = {
   status: MembershipStatus;
   effective: EffectiveStatus;
   renewedFrom: string | null;
+  /** Set once a later period renews this one — see Membership.renewedBy. */
+  renewedBy: string | null;
 };
 
 export type PaymentListItem = {
@@ -168,6 +170,7 @@ function toMembershipListItem(
       timeZone,
     ),
     renewedFrom: doc.renewedFrom ? String(doc.renewedFrom) : null,
+    renewedBy: doc.renewedBy ? String(doc.renewedBy) : null,
   };
 }
 

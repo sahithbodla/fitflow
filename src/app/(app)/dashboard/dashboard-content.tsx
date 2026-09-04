@@ -67,13 +67,14 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       value: metrics.newLeads,
       icon: ClipboardList,
       tone: "brand" as const,
+      hint: "Not yet contacted",
       href: "/leads?status=new",
     },
     {
       label: "Gym memberships",
       value: metrics.activeGymMemberships,
       icon: Users,
-      tone: "default" as const,
+      tone: "sky" as const,
       hint: "Active",
       href: "/members?state=active&category=gym",
     },
@@ -81,7 +82,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       label: "PT clients",
       value: metrics.activePtMemberships,
       icon: Dumbbell,
-      tone: "default" as const,
+      tone: "violet" as const,
       hint: "Active",
       href: "/members?state=active&category=personal_training",
     },
@@ -89,7 +90,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       label: "Coaching clients",
       value: metrics.activeCoachingClients,
       icon: Sparkles,
-      tone: "default" as const,
+      tone: "teal" as const,
       hint: "Active",
       href: "/coaching?status=active",
     },
@@ -97,7 +98,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       label: "Check-ins",
       value: metrics.checkInsThisWeek,
       icon: CalendarCheck,
-      tone: "default" as const,
+      tone: "warning" as const,
       hint: "Last 7 days",
       href: "/coaching",
     },
@@ -105,7 +106,7 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
       label: "Payments",
       value: metrics.paymentsThisMonth,
       icon: CreditCard,
-      tone: "default" as const,
+      tone: "emerald" as const,
       hint: "This month",
       href: "/payments",
     },
@@ -200,12 +201,12 @@ export async function DashboardContent({ brand }: { brand: BrandSettings }) {
         <h2 id="overview-heading" className="text-sm font-medium">
           Overview
         </h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-2 items-stretch gap-3 lg:grid-cols-3">
           {overview.map((item) => (
             <Link
               key={item.label}
               href={item.href}
-              className="focus-visible:ring-ring rounded-xl transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring block rounded-xl transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:outline-none"
             >
               <StatCard
                 label={item.label}

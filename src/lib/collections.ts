@@ -21,6 +21,7 @@ export const COLLECTIONS = {
   workoutTemplates: "workouttemplates",
   clientWorkoutPlans: "clientworkoutplans",
   dietPlans: "dietplans",
+  auditLogs: "auditlogs",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

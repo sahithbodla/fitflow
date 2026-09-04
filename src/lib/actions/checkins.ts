@@ -16,6 +16,8 @@ import {
   successState,
   type FormState,
 } from "@/lib/actions/types";
+import { recordAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const CHECKIN_FIELDS = [
   "checkInDate",
@@ -118,14 +120,23 @@ export async function saveCheckInAction(
         return errorState("This check-in no longer exists.");
       }
     } else {
-      await WeeklyCheckIn.create({
+      const created = await WeeklyCheckIn.create({
         ...data,
         coachingClient: client._id,
         recordedBy: user.name,
       });
+
+      await recordAudit({
+        actorUserId: user.id,
+        action: "CHECKIN_CREATED",
+        entityType: "checkIn",
+        entityId: String(created._id),
+        metadata: { weight: data.weight, weightUnit: data.weightUnit },
+      });
     }
   } catch (error) {
     if (isRedirectError(error)) throw error;
+    logger.error("saveCheckInAction failed", error, { clientId, checkInId });
     return errorState(
       "Could not save this check-in. Please try again.",
       undefined,

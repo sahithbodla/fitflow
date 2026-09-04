@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { BackLink } from "@/components/layout/back-link";
 import {
-  ArrowLeft,
   AtSign,
   ClipboardList,
   CreditCard,
@@ -45,6 +45,9 @@ import { formatDate } from "@/lib/dates";
 import { CONVERSION_TYPE_LABELS } from "@/lib/people/constants";
 import { LEAD_SOURCE_LABELS } from "@/lib/leads/constants";
 import { telHref, whatsAppHref } from "@/lib/leads/phone";
+import { WhatsAppReminderButton } from "@/components/people/whatsapp-reminder-button";
+import { expiredMessage, expiringSoonMessage } from "@/lib/reminders";
+import { effectiveCoachingStatus } from "@/lib/coaching/status";
 
 export async function generateMetadata({
   params,
@@ -106,13 +109,7 @@ export default async function PersonDetailPage({
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/people"
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="size-4" />
-        Customers
-      </Link>
+      <BackLink href="/people">Customers</BackLink>
 
       <PageHeader
         title={person.name}
@@ -193,34 +190,69 @@ export default async function PersonDetailPage({
                 />
               ) : (
                 <ul className="divide-y">
-                  {memberships.map((membership) => (
-                    <li key={membership.id} className="py-3 first:pt-0 last:pb-0">
-                      <Link
-                        href={`/memberships/${membership.id}`}
-                        className="group block"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="group-hover:text-brand font-medium transition-colors">
-                            {membership.planName}
-                          </span>
-                          <MembershipStatusBadge status={membership.effective} />
-                          <CategoryChip category={membership.category} />
-                          {membership.renewedFrom ? (
-                            <span className="text-muted-foreground text-xs">
-                              renewal
+                  {memberships.map((membership) => {
+                    const needsReminder =
+                      membership.effective === "expiring_soon" ||
+                      (membership.effective === "expired" && !membership.renewedBy);
+
+                    return (
+                      <li key={membership.id} className="py-3 first:pt-0 last:pb-0">
+                        <Link
+                          href={`/memberships/${membership.id}`}
+                          className="group block"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="group-hover:text-brand font-medium transition-colors">
+                              {membership.planName}
                             </span>
-                          ) : null}
-                        </div>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {formatDate(membership.startDate, brand.timezone)} –{" "}
-                          {formatDate(membership.expiryDate, brand.timezone)}
-                          {membership.price !== null
-                            ? ` · ${formatCurrency(membership.price, brand.currency)}`
-                            : ""}
-                        </p>
-                      </Link>
-                    </li>
-                  ))}
+                            <MembershipStatusBadge status={membership.effective} />
+                            <CategoryChip category={membership.category} />
+                            {membership.renewedFrom ? (
+                              <span className="text-muted-foreground text-xs">
+                                renewal
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {formatDate(membership.startDate, brand.timezone)} –{" "}
+                            {formatDate(membership.expiryDate, brand.timezone)}
+                            {membership.price !== null
+                              ? ` · ${formatCurrency(membership.price, brand.currency)}`
+                              : ""}
+                          </p>
+                        </Link>
+
+                        {needsReminder ? (
+                          <div className="mt-2">
+                            <WhatsAppReminderButton
+                              phone={membership.personPhone}
+                              message={
+                                membership.effective === "expiring_soon"
+                                  ? expiringSoonMessage({
+                                      personName: person.name,
+                                      category: membership.category,
+                                      dateLabel: formatDate(
+                                        membership.expiryDate,
+                                        brand.timezone,
+                                      ),
+                                      businessName: brand.businessName,
+                                    })
+                                  : expiredMessage({
+                                      personName: person.name,
+                                      category: membership.category,
+                                      dateLabel: formatDate(
+                                        membership.expiryDate,
+                                        brand.timezone,
+                                      ),
+                                      businessName: brand.businessName,
+                                    })
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </CardContent>
@@ -295,6 +327,46 @@ export default async function PersonDetailPage({
                       {person.coaching.goal}
                     </p>
                   ) : null}
+
+                  {(() => {
+                    const coachingEffective = effectiveCoachingStatus(
+                      person.coaching,
+                      brand.timezone,
+                    );
+                    const needsReminder =
+                      person.coaching.endDate &&
+                      (coachingEffective === "expiring_soon" ||
+                        coachingEffective === "expired");
+                    if (!needsReminder) return null;
+
+                    return (
+                      <WhatsAppReminderButton
+                        phone={person.phone}
+                        message={
+                          coachingEffective === "expiring_soon"
+                            ? expiringSoonMessage({
+                                personName: person.name,
+                                category: "online_coaching",
+                                dateLabel: formatDate(
+                                  person.coaching.endDate,
+                                  brand.timezone,
+                                ),
+                                businessName: brand.businessName,
+                              })
+                            : expiredMessage({
+                                personName: person.name,
+                                category: "online_coaching",
+                                dateLabel: formatDate(
+                                  person.coaching.endDate,
+                                  brand.timezone,
+                                ),
+                                businessName: brand.businessName,
+                              })
+                        }
+                      />
+                    );
+                  })()}
+
                   <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
                     <Link href={`/coaching/${coachingClient.id}`}>
                       Open coaching workspace

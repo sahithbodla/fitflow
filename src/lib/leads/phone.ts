@@ -24,6 +24,8 @@ export function telHref(input: string): string {
   return input.replace(/[^\d+]/g, "");
 }
 
-export function whatsAppHref(input: string): string {
-  return `https://wa.me/${input.replace(/\D/g, "")}`;
+/** A `wa.me` link, optionally pre-filling the message the chat opens with. */
+export function whatsAppHref(input: string, text?: string): string {
+  const base = `https://wa.me/${input.replace(/\D/g, "")}`;
+  return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }

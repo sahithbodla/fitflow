@@ -26,6 +26,8 @@ import {
   successState,
   type FormState,
 } from "@/lib/actions/types";
+import { recordAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 /** Shape of a template read with `.lean()`, for the assign deep-copy. */
 type TemplateSnapshot = {
@@ -663,7 +665,9 @@ export async function assignWorkoutAction(
     const client = await CoachingClient.findOne({
       _id: clientId,
       archivedAt: null,
-    }).select("_id");
+    })
+      .select("_id person")
+      .populate("person", "name");
     if (!client) return errorState("That coaching client no longer exists.");
 
     const brand = await getBrandSettings();
@@ -726,8 +730,20 @@ export async function assignWorkoutAction(
     });
 
     planId = String(created._id);
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "WORKOUT_ASSIGNED",
+      entityType: "workoutPlan",
+      entityId: planId,
+      metadata: {
+        clientName: (client.person as unknown as { name?: string } | null)?.name ?? "",
+        templateName: sourceTemplateName || parsed.data.name,
+      },
+    });
   } catch (error) {
     if (isRedirectError(error)) throw error;
+    logger.error("assignWorkoutAction failed", error, { clientId });
     return errorState("Could not create this plan. Please try again.");
   }
 
@@ -769,7 +785,16 @@ export async function updateClientPlanDetailsAction(
     doc.set(parsed.data);
     if (doc.get("sourceTemplate")) doc.set("customised", true);
     await doc.save();
-  } catch {
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "WORKOUT_UPDATED",
+      entityType: "workoutPlan",
+      entityId: planId,
+      metadata: { templateName: parsed.data.name },
+    });
+  } catch (error) {
+    logger.error("updateClientPlanDetailsAction failed", error, { planId });
     return errorState(
       "Could not save your changes. Please try again.",
       undefined,

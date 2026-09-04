@@ -30,6 +30,8 @@ import {
   successState,
   type FormState,
 } from "@/lib/actions/types";
+import { recordAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const PERSON_FIELDS = [
   "name",
@@ -143,12 +145,20 @@ export async function convertLeadAction(
       }).select("_id");
 
       if (!alreadyCoaching) {
-        await CoachingClient.create({
+        const coachingClient = await CoachingClient.create({
           person: personId,
           status: "active",
           startDate: new Date(),
           goal: lead.fitnessGoal,
           sourceLeadId: lead._id,
+        });
+
+        await recordAudit({
+          actorUserId: user.id,
+          action: "COACHING_CLIENT_CREATED",
+          entityType: "coachingClient",
+          entityId: String(coachingClient._id),
+          metadata: { personName: lead.name, goal: lead.fitnessGoal },
         });
       }
     }
@@ -164,6 +174,17 @@ export async function convertLeadAction(
       createdAt: new Date(),
     });
     await lead.save();
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "LEAD_CONVERTED",
+      entityType: "lead",
+      entityId: leadId,
+      metadata: {
+        name: lead.name,
+        convertedTo: CONVERSION_TYPE_LABELS[type as ConversionType],
+      },
+    });
   } catch (error) {
     // `redirect` throws by design; let it through.
     if (
@@ -174,6 +195,7 @@ export async function convertLeadAction(
     ) {
       throw error;
     }
+    logger.error("convertLeadAction failed", error, { leadId });
     return errorState("Could not convert this lead. Please try again.");
   }
 

@@ -179,7 +179,11 @@ export async function getCoachingStatusCounts(): Promise<
 /** The coaching engagement for a person, if any. Prevents creating a second. */
 export async function getCoachingClientForPerson(
   personId: string,
-): Promise<{ id: string; status: CoachingStatus } | null> {
+): Promise<{
+  id: string;
+  status: CoachingStatus;
+  endDate: string | null;
+} | null> {
   await connectToDatabase();
 
   const doc = await CoachingClient.findOne({
@@ -190,5 +194,9 @@ export async function getCoachingClientForPerson(
     .lean<CoachingClientDoc>();
 
   if (!doc) return null;
-  return { id: String(doc._id), status: doc.status as CoachingStatus };
+  return {
+    id: String(doc._id),
+    status: doc.status as CoachingStatus,
+    endDate: doc.endDate ? doc.endDate.toISOString() : null,
+  };
 }

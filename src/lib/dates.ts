@@ -156,6 +156,23 @@ export function formatDateWithWeekday(
   return `${weekday}, ${formatDate(date, timeZone)}`;
 }
 
+/** Formats an instant as a date and 24-hour time, e.g. "4 Sep 2026, 08:43". */
+export function formatDateTime(
+  value: Date | string | null | undefined,
+  timeZone: string,
+): string {
+  if (!value) return "—";
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: safeZone(timeZone),
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  return `${formatDate(date, timeZone)}, ${time}`;
+}
+
 /** Formats an amount using the business currency, e.g. "₹1,500". */
 export function formatCurrency(
   amount: number,

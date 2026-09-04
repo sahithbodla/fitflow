@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  ArrowLeft,
-  CalendarRange,
-  Pencil,
-  RefreshCw,
-  Receipt,
-  User,
-} from "lucide-react";
+import { CalendarRange, Pencil, RefreshCw, Receipt, User } from "lucide-react";
+import { BackLink } from "@/components/layout/back-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
@@ -76,13 +70,9 @@ export default async function MembershipDetailPage({
 
   return (
     <div className="space-y-5">
-      <Link
-        href={`/people/${membership.personId}`}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <ArrowLeft className="size-4" />
+      <BackLink href={`/people/${membership.personId}`}>
         {membership.personName}
-      </Link>
+      </BackLink>
 
       <PageHeader
         title={membership.planName}

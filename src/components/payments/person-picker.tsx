@@ -16,17 +16,24 @@ import { EmptyState } from "@/components/layout/empty-state";
 import type { PersonListItem } from "@/lib/people/queries";
 
 /**
- * Choosing a customer to act on. `hrefFor` decides where picking one leads, so
- * the same picker serves the membership and payment flows.
+ * Choosing a customer to act on. `hrefBase` decides where picking one leads
+ * (`${hrefBase}?person=<id>`), so the same picker serves the membership and
+ * payment flows.
+ *
+ * This takes a plain string rather than a `(personId) => string` function —
+ * a function prop can't cross the server/client boundary (this is a Client
+ * Component, its caller a Server Component page), and passing one here
+ * always failed with "Functions cannot be passed directly to Client
+ * Components."
  */
 export function PersonPicker({
   people,
-  hrefFor,
+  hrefBase,
   title = "Who is this for?",
   description = "Pick an existing customer, or add a new one.",
 }: {
   people: PersonListItem[];
-  hrefFor: (personId: string) => string;
+  hrefBase: string;
   title?: string;
   description?: string;
 }) {
@@ -85,7 +92,7 @@ export function PersonPicker({
               {matches.map((person) => (
                 <Link
                   key={person.id}
-                  href={hrefFor(person.id)}
+                  href={`${hrefBase}?person=${person.id}`}
                   className="hover:bg-accent/40 flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors"
                 >
                   <span className="min-w-0 flex-1">

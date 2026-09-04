@@ -223,12 +223,12 @@ export function ArchiveLeadButton({
         size="sm"
         destructive
         className="text-muted-foreground hover:text-destructive"
-        title={`Archive ${leadName}?`}
+        title={`Delete ${leadName}?`}
         description="They'll be hidden from your leads list. Nothing is permanently deleted — the record and its history are kept."
-        confirmLabel="Archive"
+        confirmLabel="Delete"
       >
         <Trash2 className="size-4" />
-        Archive lead
+        Delete lead
       </ConfirmSubmit>
     </form>
   );

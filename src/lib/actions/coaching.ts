@@ -20,6 +20,8 @@ import {
   successState,
   type FormState,
 } from "@/lib/actions/types";
+import { recordAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
 const COACHING_FIELDS = [
   "personId",
@@ -90,7 +92,7 @@ export async function createCoachingClientAction(
     const person = await Person.findOne({
       _id: parsed.data.personId,
       archivedAt: null,
-    }).select("_id fitnessGoal");
+    }).select("_id name fitnessGoal");
     if (!person) return errorState("That customer no longer exists.");
 
     const existing = await CoachingClient.findOne({
@@ -119,6 +121,14 @@ export async function createCoachingClientAction(
     });
 
     clientId = String(created._id);
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "COACHING_CLIENT_CREATED",
+      entityType: "coachingClient",
+      entityId: clientId,
+      metadata: { personName: person.name, goal: parsed.data.goal || person.fitnessGoal || "" },
+    });
   } catch (error) {
     if (
       error &&
@@ -128,6 +138,9 @@ export async function createCoachingClientAction(
     ) {
       throw error;
     }
+    logger.error("createCoachingClientAction failed", error, {
+      personId: parsed.data.personId,
+    });
     return errorState(
       "Could not start coaching. Please try again.",
       undefined,

@@ -10,6 +10,8 @@ import { PaymentRecord } from "@/models/PaymentRecord";
 import { Person } from "@/models/Person";
 import { getBrandSettings } from "@/lib/settings";
 import { zonedDayStart } from "@/lib/dates";
+import { recordAudit, diffFields } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import {
   endMembershipSchema,
   membershipPlanSchema,
@@ -242,7 +244,7 @@ export async function createMembershipAction(
     const person = await Person.findOne({
       _id: parsed.data.personId,
       archivedAt: null,
-    }).select("_id");
+    }).select("_id name");
     if (!person) return errorState("That customer no longer exists.");
 
     const created = await Membership.create({
@@ -271,7 +273,23 @@ export async function createMembershipAction(
         { $set: { renewedBy: created._id } },
       );
     }
-  } catch {
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: parsed.data.renewedFrom ? "MEMBERSHIP_RENEWED" : "MEMBERSHIP_CREATED",
+      entityType: "membership",
+      entityId: membershipId,
+      metadata: {
+        personName: person.name,
+        planName: parsed.data.planName,
+        category: parsed.data.category,
+        price: parsed.data.price ? Number(parsed.data.price) : null,
+      },
+    });
+  } catch (error) {
+    logger.error("createMembershipAction failed", error, {
+      personId: parsed.data.personId,
+    });
     return errorState(
       "Could not save this membership. Please try again.",
       undefined,
@@ -327,6 +345,16 @@ export async function updateMembershipAction(
 
   try {
     await connectToDatabase();
+
+    const before = await Membership.findOne({
+      _id: membershipId,
+      archivedAt: null,
+    })
+      .select("planName category price status expiryDate")
+      .lean();
+    if (!before) return errorState("This membership no longer exists.");
+
+    const nextPrice = parsed.data.price ? Number(parsed.data.price) : null;
     const result = await Membership.updateOne(
       { _id: membershipId, archivedAt: null },
       {
@@ -336,7 +364,7 @@ export async function updateMembershipAction(
           purchaseDate,
           startDate,
           expiryDate,
-          price: parsed.data.price ? Number(parsed.data.price) : null,
+          price: nextPrice,
           status: parsed.data.status,
           notes: parsed.data.notes,
         },
@@ -345,7 +373,30 @@ export async function updateMembershipAction(
     if (result.matchedCount === 0) {
       return errorState("This membership no longer exists.");
     }
-  } catch {
+
+    const person = await Person.findById(parsed.data.personId).select("name").lean();
+    await recordAudit({
+      actorUserId: user.id,
+      action: "MEMBERSHIP_UPDATED",
+      entityType: "membership",
+      entityId: membershipId,
+      metadata: {
+        personName: person?.name ?? "",
+        ...diffFields(
+          before,
+          {
+            planName: parsed.data.planName,
+            category: parsed.data.category,
+            price: nextPrice,
+            status: parsed.data.status,
+            expiryDate,
+          },
+          ["planName", "category", "price", "status", "expiryDate"],
+        ),
+      },
+    });
+  } catch (error) {
+    logger.error("updateMembershipAction failed", error, { membershipId });
     return errorState(
       "Could not save your changes. Please try again.",
       undefined,
@@ -384,6 +435,15 @@ export async function endMembershipAction(
 
   try {
     await connectToDatabase();
+
+    const before = await Membership.findOne({
+      _id: parsed.data.membershipId,
+      archivedAt: null,
+    })
+      .select("status person")
+      .lean();
+    if (!before) return errorState("This membership no longer exists.");
+
     const result = await Membership.updateOne(
       { _id: parsed.data.membershipId, archivedAt: null },
       {
@@ -398,7 +458,24 @@ export async function endMembershipAction(
     if (result.matchedCount === 0) {
       return errorState("This membership no longer exists.");
     }
-  } catch {
+
+    const person = await Person.findById(before.person).select("name").lean();
+    await recordAudit({
+      actorUserId: user.id,
+      action: "MEMBERSHIP_STATUS_CHANGED",
+      entityType: "membership",
+      entityId: parsed.data.membershipId,
+      metadata: {
+        personName: person?.name ?? "",
+        from: before.status,
+        to: parsed.data.mode,
+        reason: parsed.data.reason,
+      },
+    });
+  } catch (error) {
+    logger.error("endMembershipAction failed", error, {
+      membershipId: parsed.data.membershipId,
+    });
     return errorState("Could not end this membership. Please try again.");
   }
 
@@ -489,10 +566,10 @@ export async function recordPaymentAction(
     const person = await Person.findOne({
       _id: parsed.data.personId,
       archivedAt: null,
-    }).select("_id");
+    }).select("_id name");
     if (!person) return errorState("That customer no longer exists.");
 
-    await PaymentRecord.create({
+    const created = await PaymentRecord.create({
       person: person._id,
       membership: parsed.data.membershipId || null,
       amount: Number(parsed.data.amount),
@@ -503,8 +580,24 @@ export async function recordPaymentAction(
       notes: parsed.data.notes,
       recordedBy: user.name,
     });
+
+    await recordAudit({
+      actorUserId: user.id,
+      action: "PAYMENT_CREATED",
+      entityType: "payment",
+      entityId: String(created._id),
+      metadata: {
+        personName: person.name,
+        amount: Number(parsed.data.amount),
+        currency: brand.currency,
+        method: parsed.data.method,
+      },
+    });
   } catch (error) {
     if (isRedirectError(error)) throw error;
+    logger.error("recordPaymentAction failed", error, {
+      personId: parsed.data.personId,
+    });
     return errorState(
       "Could not record this payment. Please try again.",
       undefined,
@@ -557,6 +650,12 @@ export async function updatePaymentAction(
 
   try {
     await connectToDatabase();
+
+    const before = await PaymentRecord.findOne({ _id: paymentId, archivedAt: null })
+      .select("amount method status")
+      .lean();
+    if (!before) return errorState("This payment no longer exists.");
+
     const result = await PaymentRecord.updateOne(
       { _id: paymentId, archivedAt: null },
       {
@@ -573,8 +672,29 @@ export async function updatePaymentAction(
     if (result.matchedCount === 0) {
       return errorState("This payment no longer exists.");
     }
+
+    const person = await Person.findById(parsed.data.personId).select("name").lean();
+    await recordAudit({
+      actorUserId: user.id,
+      action: "PAYMENT_UPDATED",
+      entityType: "payment",
+      entityId: paymentId,
+      metadata: {
+        personName: person?.name ?? "",
+        ...diffFields(
+          before,
+          {
+            amount: Number(parsed.data.amount),
+            method: parsed.data.method,
+            status: parsed.data.status,
+          },
+          ["amount", "method", "status"],
+        ),
+      },
+    });
   } catch (error) {
     if (isRedirectError(error)) throw error;
+    logger.error("updatePaymentAction failed", error, { paymentId });
     return errorState(
       "Could not save this payment. Please try again.",
       undefined,
@@ -592,7 +712,7 @@ export async function updatePaymentAction(
   redirect(`/payments/${parsed.data.personId}`);
 }
 
-/** Soft-deletes a payment; financial history is never hard-deleted. */
+/** Soft-deletes (voids) a payment; financial history is never hard-deleted. */
 export async function deletePaymentAction(
   _prev: FormState,
   formData: FormData,
@@ -607,6 +727,12 @@ export async function deletePaymentAction(
 
   try {
     await connectToDatabase();
+
+    const before = await PaymentRecord.findOne({ _id: paymentId, archivedAt: null })
+      .select("amount currency person")
+      .lean();
+    if (!before) return errorState("This payment no longer exists.");
+
     const result = await PaymentRecord.updateOne(
       { _id: paymentId, archivedAt: null },
       { $set: { archivedAt: new Date() } },
@@ -614,7 +740,21 @@ export async function deletePaymentAction(
     if (result.matchedCount === 0) {
       return errorState("This payment no longer exists.");
     }
-  } catch {
+
+    const person = await Person.findById(before.person).select("name").lean();
+    await recordAudit({
+      actorUserId: user.id,
+      action: "PAYMENT_VOIDED",
+      entityType: "payment",
+      entityId: paymentId,
+      metadata: {
+        personName: person?.name ?? "",
+        amount: before.amount,
+        currency: before.currency,
+      },
+    });
+  } catch (error) {
+    logger.error("deletePaymentAction failed", error, { paymentId });
     return errorState("Could not delete this payment. Please try again.");
   }
 
